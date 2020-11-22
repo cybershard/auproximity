@@ -27,7 +27,7 @@ export enum PublicLobbyRegion {
     Asia
 }
 
-export enum MapID {
+export enum MapIdModel {
     TheSkeld = 0,
     MiraHQ = 1,
     Polus = 2
@@ -47,7 +47,7 @@ export abstract class BackendAdapter extends EventEmitter {
     }
     abstract initialize(): void;
     abstract destroy(): void;
-    emitMapChange(map: MapID) {
+    emitMapChange(map: MapIdModel) {
         this.emit(BackendEvent.MapChange, { map });
     }
     emitPlayerPose(name: string, pose: Pose): void {

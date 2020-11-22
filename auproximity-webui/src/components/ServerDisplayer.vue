@@ -2,11 +2,7 @@
   <v-card class="pa-5">
     <div class="text-center">
       <h2>{{ title }}</h2>
-      <v-select
-        :items="colliderMaps"
-        v-model="colliderMap"
-        label="Choose map"
-      ></v-select>
+      <h4>Current Map: {{ this.colliderMap }}</h4>
     </div>
     <v-list v-if="$store.state.joinedRoom">
       <v-list-item-group>

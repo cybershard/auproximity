@@ -3,7 +3,7 @@ import {
     BackendModel,
     BackendType,
     ImpostorBackendModel,
-    MapID,
+    MapIdModel,
     PublicLobbyBackendModel, RoomGroup
 } from "./types/Backend";
 import Client, {Pose} from "./Client";
@@ -19,7 +19,7 @@ export default class Room {
 
     public clientRoomGroupMap = new Map<string, RoomGroup>();
 
-    map: MapID;
+    map: MapIdModel;
 
     constructor(backendModel: BackendModel) {
         this.backendModel = backendModel;
@@ -38,7 +38,7 @@ export default class Room {
         }
     }
     private initializeBackend() {
-        this.backendAdapter.on(BackendEvent.MapChange, (payload: { map: MapID }) => {
+        this.backendAdapter.on(BackendEvent.MapChange, (payload: { map: MapIdModel }) => {
             this.map = payload.map;
 
             this.members.forEach(c => {
@@ -97,7 +97,7 @@ export default class Room {
         if (this.clientRoomGroupMap.has(client.name)) {
             client.setGroupOf(client.uuid, this.clientRoomGroupMap.get(client.name));
         }
-        
+
         client.setMap(this.map);
 
         this.members.forEach(c => c.addClient(client.uuid, client.name, client.pose, client.group));

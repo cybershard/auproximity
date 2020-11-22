@@ -26,8 +26,6 @@ export default class PublicLobbyBackend extends BackendAdapter {
         this.backendModel = backendModel;
     }
 
-    throttledEmitPlayerMove = _.throttle(this.emitPlayerPose, 300)
-
     playerData: {
         name: string;
         clientId: number;
@@ -38,7 +36,6 @@ export default class PublicLobbyBackend extends BackendAdapter {
     client: AmongusClient;
 
     async initialize(): Promise<void> {
-        console.log("initializing");
         try {
             // connect
             // keep trying to join game
@@ -50,7 +47,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
             // rejoin game
 
             this.client = new AmongusClient({
-                debug: DebugOptions.None
+                debug: DebugOptions.Everything
             });
 
             let servers;
@@ -61,15 +58,15 @@ export default class PublicLobbyBackend extends BackendAdapter {
             } else if (this.backendModel.region === PublicLobbyRegion.Asia) {
                 servers = MasterServers.AS[0];
             }
-            console.log("initializing 2");
-
 
             console.log(servers[0], servers[1], this.backendModel.gameCode);
-            await this.client.connect(servers[0], servers[1], "auproximity");
+            await this.client.connect(servers[0], servers[1], "auprox");
             const game = await this.client.join(this.backendModel.gameCode, {
                 doSpawn: true
             });
+            console.log("awaiting spawn before");
             await game.awaitSpawns();
+            console.log("awaited spawn");
             game.clients.forEach(client => this.playerData.push({
                 name: client.name,
                 clientId: client.id,
@@ -78,13 +75,12 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 transformNetId: client.Player.CustomNetworkTransform.netid
             }));
             await this.client.disconnect();
-            console.log("disconnected with data: " + this.playerData);
+            console.log("disconnected with data: ", this.playerData);
 
-            await this.client.connect(servers[0], servers[1], "auproximity");
-            await this.client.join(this.backendModel.gameCode, {
-                doSpawn: false
+            // restart new client
+            this.client = new AmongusClient({
+                debug: DebugOptions.Everything
             });
-
             this.client.on("packet", packet => {
                if (packet.op === PacketID.Reliable || packet.op === PacketID.Unreliable) {
                     packet.payloads.forEach(async payload => await handlePayload(payload));
@@ -104,11 +100,13 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 } else if (payload.payloadid === PayloadID.RemovePlayer) {
                     this.playerData = this.playerData.filter(p => p.clientId !== payload.clientid);
                     // Handler for if the game sets us to host. Might be a hacky way.
-                    await this.client.disconnect();
-                    await this.client.connect(servers[0], servers[1], "auproximity");
-                    await this.client.join(this.backendModel.gameCode, {
-                        doSpawn: false
-                    });
+                    if (payload.clientid === this.client.clientid) {
+                        await this.client.disconnect();
+                        await this.client.connect(servers[0], servers[1], "auproximity");
+                        await this.client.join(this.backendModel.gameCode, {
+                            doSpawn: false
+                        });
+                    }
                     console.log("removed player");
                 } else if (payload.payloadid === PayloadID.GameData || payload.payloadid === PayloadID.GameDataTo) {
                     (payload as (GameDataPayload | GameDataToPayload)).parts.forEach(part => handleGameDataPart(part));
@@ -126,11 +124,13 @@ export default class PublicLobbyBackend extends BackendAdapter {
                             y: LerpValue(reader.uint16LE() / 65535, -40, 40)
                         };
                         this.emitPlayerPose(player.name, pose);
-                        console.log("someone moved to pos: " + pose);
+                        console.log("someone moved to pos: ", pose);
                     }
                 } else if (part.type == MessageID.RPC) {
+                    console.log("handling rpc", part);
                     handleRPC(part as RPCMessage);
                 } else if (part.type == MessageID.Spawn) {
+                    console.log("handling spawn", part);
                     handleSpawnMessage(part as SpawnMessage);
                 }
             };
@@ -190,14 +190,22 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 }
             };
 
+            await this.client.connect(servers[0], servers[1], "auprox");
+            await this.client.join(this.backendModel.gameCode, {
+                doSpawn: false
+            });
+
             console.log(`Initialized PublicLobby Backend for game: ${this.backendModel.gameCode}`);
         } catch (err) {
             console.warn("Error in PublicLobbyBackend, disposing room: " + err);
             this.emit(BackendEvent.Error);
-            this.destroy();
         }
     }
-    destroy(): void {
+    async destroy(): Promise<void> {
+        if (this.client) {
+            await this.client.disconnect();
+            this.client = null;
+        }
         console.log(`Destroyed PublicLobbyBackend for game: ${this.backendModel.gameCode}`);
     }
 }

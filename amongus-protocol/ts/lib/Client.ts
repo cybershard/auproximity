@@ -584,10 +584,11 @@ export class AmongusClient extends EventEmitter {
             this.awaitPayload(p => p.payloadid === PayloadID.JoinedGame),
             this.awaitPayload(p => p.payloadid === PayloadID.JoinGame)
         ]);
+        console.log("raced payload:" , payload)
 
         if (payload.payloadid === PayloadID.Redirect) {
             await this.disconnect();
-
+            console.log("redirecting to: ", payload);
             await this.connect(payload.ip, payload.port, this.username);
 
             return await this.join(code, options);

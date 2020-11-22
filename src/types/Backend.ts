@@ -27,6 +27,12 @@ export enum PublicLobbyRegion {
     Asia
 }
 
+export enum MapID {
+    TheSkeld = 0,
+    MiraHQ = 1,
+    Polus = 2
+}
+
 // Room groups
 export enum RoomGroup {
     Main,
@@ -41,6 +47,9 @@ export abstract class BackendAdapter extends EventEmitter {
     }
     abstract initialize(): void;
     abstract destroy(): void;
+    emitMapChange(map: MapID) {
+        this.emit(BackendEvent.MapChange, { map });
+    }
     emitPlayerPose(name: string, pose: Pose): void {
         this.emit(BackendEvent.PlayerPose, { name, pose });
     }
@@ -54,8 +63,8 @@ export abstract class BackendAdapter extends EventEmitter {
         this.emit(BackendEvent.AllPlayerJoinGroups, { group });
     }
 }
-
 export enum BackendEvent {
+    MapChange = "mapchange",
     PlayerPose = "playerpose",
     PlayerJoinGroup = "playerjoingroup",
     AllPlayerPoses = "allplayerposes",

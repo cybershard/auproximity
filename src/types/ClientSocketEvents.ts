@@ -4,6 +4,7 @@ enum ClientSocketEvents {
     AddClient     = "addclient",
     SetAllClients = "setallclients",
     RemoveClient  = "removeclient",
+    SetMap        = "setmap",
     SetPose       = "setpose",
     SetGroup      = "setgroup"
 }

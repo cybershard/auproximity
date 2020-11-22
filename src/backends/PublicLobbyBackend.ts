@@ -68,6 +68,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
             });
             console.log("awaiting spawn before");
             await game.awaitSpawns();
+            this.emitMapChange(game.options.mapID);
             console.log("awaited spawn");
             game.clients.forEach(client => this.playerData.push({
                 name: client.name,
@@ -141,7 +142,9 @@ export default class PublicLobbyBackend extends BackendAdapter {
             };
 
             const handleRPC = (rpcPart: RPCMessage) => {
-                if (rpcPart.rpcid === RPCID.StartMeeting) {
+                if (rpcPart.rpcid === RPCID.SyncSettings) {
+                    this.emitMapChange(rpcPart.options.mapID);
+                } else if (rpcPart.rpcid === RPCID.StartMeeting) {
                     this.emitAllPlayerPoses({ x: 0, y: 0 });
                     console.log("meeting started");
                 } else if (rpcPart.rpcid === RPCID.VotingComplete) {

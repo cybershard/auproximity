@@ -51,13 +51,12 @@ import ClientListItem from '@/components/ClientListItem.vue'
 })
 export default class ServerDisplayer extends Vue {
   colliderMaps = [
-    'Lobby',
     'Skeld',
     'Mira HQ',
     'Polus'
-  ];
+  ] as const;
 
-  colliderMap: 'Lobby' | 'Skeld' | 'Mira HQ' | 'Polus' = 'Skeld';
+  colliderMap: 'Skeld' | 'Mira HQ' | 'Polus' = 'Skeld';
 
   LERP_VALUE = 3;
 
@@ -129,6 +128,11 @@ export default class ServerDisplayer extends Vue {
       gainNode.connect(ctx.destination)
       this.remoteStreams.push({ uuid: call.peer, ctx, source, gainNode, remoteStream })
     })
+  }
+
+  @Socket(ClientSocketEvents.SetMap)
+  onSetMap (payload: { map: number }) {
+    this.colliderMap = this.colliderMaps[payload.map] || 'Skeld'
   }
 
   @Socket(ClientSocketEvents.SetGroup)

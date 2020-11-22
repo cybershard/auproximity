@@ -1,6 +1,6 @@
 import {Socket} from "socket.io";
 import ClientSocketEvents from "./types/ClientSocketEvents";
-import {BackendModel, BackendType, ImpostorBackendModel, PublicLobbyBackendModel, RoomGroup} from "./types/Backend";
+import {BackendModel, BackendType, ImpostorBackendModel, MapID, PublicLobbyBackendModel, RoomGroup} from "./types/Backend";
 import Room from "./Room";
 import {state} from "./main";
 import {IClientBase} from "./types/IClientBase";
@@ -94,6 +94,9 @@ export default class Client implements IClientBase {
     }
     removeClient(uuid: string): void {
         this.socket.emit(ClientSocketEvents.RemoveClient, uuid);
+    }
+    setMap(map: MapID) {
+        this.socket.emit(ClientSocketEvents.SetMap, { map });
     }
     setPoseOf(uuid: string, pose: Pose): void {
         if (uuid === this.uuid) {

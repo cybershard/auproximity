@@ -182,6 +182,8 @@ export class AmongusClient extends EventEmitter {
             } else {
                 this.debug(DebugOptions.SpecialInbound, "Received packet", format_buffer, util.inspect(packet, false, 10, true));
             }
+            
+            this.emit("packet", packet);
 
             if (packet.bound === "client") {
                 switch (packet.op) {
@@ -403,8 +405,6 @@ export class AmongusClient extends EventEmitter {
                         break;
                 }
             }
-
-            this.emit("packet", packet);
         });
     }
 

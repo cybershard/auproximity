@@ -19,6 +19,8 @@ import {
     SpawnMessage
 } from "../../amongus-protocol/ts/lib/interfaces/Packets";
 
+import util from "util"
+
 export default class PublicLobbyBackend extends BackendAdapter {
     backendModel: PublicLobbyBackendModel
     constructor(backendModel: PublicLobbyBackendModel) {
@@ -47,7 +49,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
             // rejoin game
 
             this.client = new AmongusClient({
-                debug: DebugOptions.Everything
+                debug: DebugOptions.None
             });
 
             let servers;
@@ -82,9 +84,10 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 debug: DebugOptions.Everything
             });
             this.client.on("packet", packet => {
-               if (packet.op === PacketID.Reliable || packet.op === PacketID.Unreliable) {
+                // console.log(util.inspect(packet, false, 10, true));
+                if (packet.op === PacketID.Reliable || packet.op === PacketID.Unreliable) {
                     packet.payloads.forEach(async payload => await handlePayload(payload));
-               }
+                }
             });
 
             const handlePayload = async (payload: Payload) => {
@@ -109,7 +112,9 @@ export default class PublicLobbyBackend extends BackendAdapter {
                     }
                     console.log("removed player");
                 } else if (payload.payloadid === PayloadID.GameData || payload.payloadid === PayloadID.GameDataTo) {
-                    (payload as (GameDataPayload | GameDataToPayload)).parts.forEach(part => handleGameDataPart(part));
+                    (payload as (GameDataPayload | GameDataToPayload)).parts.forEach(part => {
+                        handleGameDataPart(part);
+                    });
                 }
             };
 

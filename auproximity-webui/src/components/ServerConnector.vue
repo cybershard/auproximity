@@ -95,7 +95,7 @@ export default class ServerConnector extends Vue {
   ];
 
   ip = this.$route.params.region || '';
-  publicLobbyRegion = PublicLobbyRegion[this.$route.params.region || 'NorthAmerica'] || PublicLobbyRegion.NorthAmerica;
+  publicLobbyRegion: PublicLobbyRegion = PublicLobbyRegion[this.$route.params.region || 'NorthAmerica'] || PublicLobbyRegion.NorthAmerica;
   regions = [
     {
       regionName: PublicLobbyRegion[PublicLobbyRegion.NorthAmerica],

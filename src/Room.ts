@@ -85,7 +85,9 @@ export default class Room {
                 this.members.forEach(c => c.setGroupOf(client.uuid, payload.group));
             });
         });
-        this.backendAdapter.on(BackendEvent.Error, async () => {
+        this.backendAdapter.on(BackendEvent.Error, async (payload: { err: string }) => {
+            this.members.forEach(c => c.sendError(payload.err));
+
             await this.destroy();
         });
         this.backendAdapter.initialize();

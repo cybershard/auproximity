@@ -66,10 +66,23 @@ export default class PublicLobbyBackend extends BackendAdapter {
             }
 
             console.log(servers[0], servers[1], this.backendModel.gameCode);
-            await this.client.connect(servers[0], servers[1], "auprox");
-            const game = await this.client.join(this.backendModel.gameCode, {
-                doSpawn: true
-            });
+            try {
+                await this.client.connect(servers[0], servers[1], "auprox");
+            } catch (e) {
+                console.error("An error occurred", e);
+                this.emitError("Couldn't connect to the Among Us servers, the server may be full, try again later!");
+                return;
+            }
+            let game;
+            try {
+                game = await this.client.join(this.backendModel.gameCode, {
+                    doSpawn: true
+                });
+            } catch (e) {
+                console.error("Couldn't join game", e);
+                this.emitError("Couldn't join the game, make sure that the game hasn't started and there is a spot for the client!");
+                return;
+            }
             console.log("awaiting spawn before");
             await game.awaitSpawns();
             this.emitMapChange(MapIdModel[MapID[game.options.mapID]]);
@@ -104,7 +117,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
                     await this.client.join(this.backendModel.gameCode, {
                         doSpawn: false
                     });
-                    console.log("ended game");
+                    console.log("ended game")
                 } else if (payload.payloadid === PayloadID.RemovePlayer) {
                     this.playerData = this.playerData.filter(p => p.clientId !== payload.clientid);
                     // Handler for if the game sets us to host. Might be a hacky way.
@@ -213,7 +226,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
         }
     }
     async destroy(): Promise<void> {
-        if (this.client) {
+        if (this.client && this.client.socket) {
             await this.client.disconnect();
             this.client = null;
         }

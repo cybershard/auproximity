@@ -62,6 +62,9 @@ export abstract class BackendAdapter extends EventEmitter {
     emitAllPlayerJoinGroups(group: RoomGroup): void {
         this.emit(BackendEvent.AllPlayerJoinGroups, { group });
     }
+    emitError(err: string) {
+        this.emit(BackendEvent.Error, { err });
+    }
 }
 export enum BackendEvent {
     MapChange = "mapchange",

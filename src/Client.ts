@@ -110,4 +110,7 @@ export default class Client implements IClientBase {
         }
         this.socket.emit(ClientSocketEvents.SetGroup, { uuid, group });
     }
+    sendError(err: string) {
+        this.socket.emit(ClientSocketEvents.Error, { err });
+    }
 }

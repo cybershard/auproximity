@@ -7,7 +7,8 @@ enum ClientSocketEvents {
     RemoveClient = 'removeclient',
     SetMap = 'setmap',
     SetPose = 'setpose',
-    SetGroup = 'setgroup'
+    SetGroup = 'setgroup',
+    Error = 'error'
 }
 
 export default ClientSocketEvents

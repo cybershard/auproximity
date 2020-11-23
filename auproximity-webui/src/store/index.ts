@@ -65,7 +65,7 @@ export default new Vuex.Store({
     }
   },
   actions: {
-    [`socket_${ClientSocketEvents.Disconnect}`] ({ commit }) {
+    destroyConnection ({ commit }) {
       commit('setUuid', '')
       commit('setJoinedRoom', false)
       commit('setNameAndBackendModel', {
@@ -75,6 +75,12 @@ export default new Vuex.Store({
           backendType: BackendType.NoOp
         }
       })
+    },
+    [`socket_${ClientSocketEvents.Error}`] ({ dispatch }) {
+      dispatch('destroyConnection')
+    },
+    [`socket_${ClientSocketEvents.Disconnect}`] ({ dispatch }) {
+      dispatch('destroyConnection')
     },
     [`socket_${ClientSocketEvents.SetUuid}`] ({ commit }, uuid: string) {
       commit('setUuid', uuid)

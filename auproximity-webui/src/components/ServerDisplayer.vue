@@ -2,7 +2,7 @@
   <v-card class="pa-5">
     <div class="text-center">
       <h2>{{ title }}</h2>
-      <h4 v-if="colliderMap !== 'Lobby'">Current Map: {{ this.colliderMap }}</h4>
+      <h4 v-if="$store.state.joinedRoom">Current Map: {{ this.colliderMap }}</h4>
     </div>
     <v-list v-if="$store.state.joinedRoom">
       <v-list-item-group>
@@ -17,6 +17,19 @@
         ></audio>
       </span>
     </div>
+    <v-snackbar v-model="errorOccurred">
+      {{ error }}
+      <template v-slot:action="{ attrs }">
+        <v-btn
+          color="pink"
+          text
+          v-bind="attrs"
+          @click="snackbar = false"
+        >
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
   </v-card>
 </template>
 
@@ -46,12 +59,15 @@ import ClientListItem from '@/components/ClientListItem.vue'
   }
 })
 export default class ServerDisplayer extends Vue {
-  colliderMap: 'Skeld' | 'Mira HQ' | 'Polus' | 'Lobby' = 'Lobby';
+  colliderMap: 'Skeld' | 'Mira HQ' | 'Polus' = 'Skeld';
 
   LERP_VALUE = 3;
 
   peer!: Peer;
   remoteStreams: RemoteStreamModel[] = [];
+
+  error = '';
+  errorOccurred = false;
 
   @Socket(ClientSocketEvents.SetUuid)
   onSetUuid (uuid: string) {
@@ -75,6 +91,7 @@ export default class ServerDisplayer extends Vue {
 
   @Socket(ClientSocketEvents.Disconnect)
   onDisconnect () {
+    this.remoteStreams.forEach(s => s.ctx.close())
     this.remoteStreams = []
     if (this.peer) this.peer.destroy()
   }
@@ -169,6 +186,15 @@ export default class ServerDisplayer extends Vue {
       if (!remoteStream) return
       this.recalcVolumeForRemoteStream(remoteStream)
     }
+  }
+
+  @Socket(ClientSocketEvents.Error)
+  onError (payload: { err: string }) {
+    this.error = payload.err
+    this.errorOccurred = true
+    this.remoteStreams.forEach(s => s.ctx.close())
+    this.remoteStreams = []
+    if (this.peer) this.peer.destroy()
   }
 
   recalcVolumeForRemoteStream (stream: { uuid: string; gainNode: GainNode }) {

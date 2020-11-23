@@ -134,7 +134,6 @@ export default class PublicLobbyBackend extends BackendAdapter {
                             y: LerpValue(reader.uint16LE() / 65535, -40, 40)
                         };
                         this.emitPlayerPose(player.name, pose);
-                        console.log("someone moved to pos: ", pose);
                     }
                 } else if (part.type == MessageID.RPC) {
                     console.log("handling rpc", part);

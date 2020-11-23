@@ -43,7 +43,7 @@ export default class Room {
 
             this.members.forEach(c => {
                 c.setMap(payload.map);
-            })
+            });
         });
         this.backendAdapter.on(BackendEvent.PlayerPose, (payload: { name: string; pose: Pose; }) => {
             const client = this.members.find(c => c.name === payload.name);
@@ -94,9 +94,12 @@ export default class Room {
     // Public methods
     addClient(client: Client): void {
         // restore roomgroup for a client if it exists
+        console.log("adding client: ", client)
         if (this.clientRoomGroupMap.has(client.name)) {
             client.setGroupOf(client.uuid, this.clientRoomGroupMap.get(client.name));
         }
+        console.log("The roomgroupmap is: ", this.clientRoomGroupMap);
+        console.log("The client after setting group is now: ", client);
 
         client.setMap(this.map);
 

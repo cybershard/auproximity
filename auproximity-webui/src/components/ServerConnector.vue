@@ -1,6 +1,6 @@
 <template>
   <v-card class="pa-5">
-    <v-form v-model="valid" @submit.prevent="joinRoom">
+    <v-form @submit.prevent="joinRoom">
       <v-text-field
         v-model="name"
         label="Name"
@@ -25,7 +25,6 @@
         required
         outlined
       ></v-select>
-
       <v-text-field
         v-if="backendType === 2"
         v-model="ip"
@@ -43,7 +42,6 @@
         required
         outlined
       ></v-select>
-
       <v-btn
         :disabled="!valid"
         color="success"
@@ -78,10 +76,9 @@ import {
 
 @Component({})
 export default class ServerConnector extends Vue {
-  valid = false;
   name = '';
   gameCode = this.$route.params.gamecode ? this.$route.params.gamecode.slice(0, 6) : '';
-  backendType: BackendType = BackendType[this.$route.params.backend || 0];
+  backendType: BackendType = BackendType[this.$route.params.backend || 'PublicLobby'] || BackendType.PublicLobby;
   items = [
     {
       backendName: 'Official Among Us Servers',
@@ -98,7 +95,7 @@ export default class ServerConnector extends Vue {
   ];
 
   ip = this.$route.params.region || '';
-  publicLobbyRegion = PublicLobbyRegion[this.$route.params.region || 0];
+  publicLobbyRegion = PublicLobbyRegion[this.$route.params.region || 'NorthAmerica'] || PublicLobbyRegion.NorthAmerica;
   regions = [
     {
       regionName: PublicLobbyRegion[PublicLobbyRegion.NorthAmerica],
@@ -154,6 +151,15 @@ export default class ServerConnector extends Vue {
     } else {
       return location.origin + '/' + BackendType[this.backendType] + '/' + PublicLobbyRegion[this.publicLobbyRegion] + '/' + this.gameCode
     }
+  }
+
+  get valid () {
+    return this.name &&
+      this.gameCode &&
+      this.gameCode.length === 6 &&
+      typeof this.backendType === 'number' &&
+      ((this.backendType === BackendType.Impostor && this.ip) ||
+        (this.backendType === BackendType.PublicLobby && typeof this.publicLobbyRegion === 'number'))
   }
 }
 </script>

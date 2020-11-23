@@ -1,7 +1,14 @@
-import {BackendAdapter, BackendEvent, PublicLobbyBackendModel, PublicLobbyRegion, RoomGroup} from "../types/Backend";
+import {
+    BackendAdapter,
+    BackendEvent,
+    MapIdModel,
+    PublicLobbyBackendModel,
+    PublicLobbyRegion,
+    RoomGroup
+} from "../types/Backend";
 import {
     AmongusClient, BufferReader,
-    DebugOptions, LerpValue,
+    DebugOptions, LerpValue, MapID,
     MasterServers,
     MessageID,
     PacketID,
@@ -9,7 +16,6 @@ import {
     RPCID,
     SpawnID
 } from "../../amongus-protocol/ts";
-import * as _ from "lodash";
 import {
     GameDataMessage,
     GameDataPayload,
@@ -18,8 +24,6 @@ import {
     RPCMessage,
     SpawnMessage
 } from "../../amongus-protocol/ts/lib/interfaces/Packets";
-
-import util from "util"
 
 export default class PublicLobbyBackend extends BackendAdapter {
     backendModel: PublicLobbyBackendModel
@@ -68,7 +72,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
             });
             console.log("awaiting spawn before");
             await game.awaitSpawns();
-            this.emitMapChange(game.options.mapID);
+            this.emitMapChange(MapIdModel[MapID[game.options.mapID]]);
             console.log("awaited spawn");
             game.clients.forEach(client => this.playerData.push({
                 name: client.name,
@@ -82,7 +86,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
 
             // restart new client
             this.client = new AmongusClient({
-                debug: DebugOptions.Everything
+                debug: DebugOptions.None
             });
             this.client.on("packet", packet => {
                 // console.log(util.inspect(packet, false, 10, true));
@@ -143,7 +147,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
 
             const handleRPC = (rpcPart: RPCMessage) => {
                 if (rpcPart.rpcid === RPCID.SyncSettings) {
-                    this.emitMapChange(rpcPart.options.mapID);
+                    this.emitMapChange(MapIdModel[MapID[game.options.mapID]]);
                 } else if (rpcPart.rpcid === RPCID.StartMeeting) {
                     this.emitAllPlayerPoses({ x: 0, y: 0 });
                     console.log("meeting started");

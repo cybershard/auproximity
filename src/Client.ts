@@ -27,7 +27,7 @@ export default class Client implements IClientBase {
             x: 0,
             y: 0
         };
-        this.group = RoomGroup.Main;
+        this.group = RoomGroup.Spectator;
         this.name = "";
 
         // Initialize socket events

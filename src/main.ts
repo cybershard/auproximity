@@ -14,7 +14,7 @@ const server = http.createServer(app);
 const io = new socketio.Server(server, process.env.NODE_ENV === "production" ? {} : {
     cors: { origin: `http://${DEV_WEBUI_HOSTNAME}:${DEV_WEBUI_PORT}` }
 });
-app.use(ExpressPeerServer({
+app.use("/peerjs", ExpressPeerServer({
     // eslint-disable-next-line
     // @ts-ignore
     on(event, peerServerHandler) {
@@ -39,6 +39,10 @@ io.on("connection", (socket: Socket) => {
     console.log("user connected", client.uuid);
 });
 
+
+app.all("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "dist", "index.html"));
+});
 server.listen(process.env.PORT || SERVER_PORT, () => {
     console.log(`Listening on port ${SERVER_PORT}`);
 });

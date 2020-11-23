@@ -58,7 +58,8 @@ export default class ServerDisplayer extends Vue {
     this.peer = new Peer(uuid, {
       host: SERVER_HOSTNAME,
       port: SERVER_PORT,
-      secure: SERVER_SECURE
+      secure: SERVER_SECURE,
+      path: '/peerjs'
     })
     this.peer.on('open', id => console.log('My peer ID is: ' + id))
     this.peer.on('error', error => console.log('PeerJS Error: ' + error))
@@ -84,7 +85,8 @@ export default class ServerDisplayer extends Vue {
       this.peer = new Peer(this.$store.state.uuid, {
         host: SERVER_HOSTNAME,
         port: SERVER_PORT,
-        secure: SERVER_SECURE
+        secure: SERVER_SECURE,
+        path: '/peerjs'
       })
     }
 

@@ -52,6 +52,16 @@
       >
         Join
       </v-btn>
+      <v-btn
+        :disabled="!valid"
+        color="info"
+        class="mr-4"
+        type="submit"
+        @click="copyShareSlug"
+      >
+        Share URL
+      </v-btn>
+      <input v-model="shareSlug" id="slug-share">
     </v-form>
   </v-card>
 </template>
@@ -70,8 +80,8 @@ import {
 export default class ServerConnector extends Vue {
   valid = false;
   name = '';
-  gameCode = '';
-  backendType: BackendType = BackendType.PublicLobby;
+  gameCode = this.$route.params.gamecode ? this.$route.params.gamecode.slice(0, 6) : '';
+  backendType: BackendType = BackendType[this.$route.params.backend || 0];
   items = [
     {
       backendName: 'Official Among Us Servers',
@@ -87,8 +97,8 @@ export default class ServerConnector extends Vue {
     }
   ];
 
-  ip = '';
-  publicLobbyRegion = PublicLobbyRegion.NorthAmerica
+  ip = this.$route.params.region || '';
+  publicLobbyRegion = PublicLobbyRegion[this.$route.params.region || 0];
   regions = [
     {
       regionName: PublicLobbyRegion[PublicLobbyRegion.NorthAmerica],
@@ -128,7 +138,28 @@ export default class ServerConnector extends Vue {
       backendModel
     })
   }
+
+  copyShareSlug () {
+    const copyText = document.getElementById('slug-share') as HTMLInputElement
+
+    copyText.select()
+    copyText.setSelectionRange(0, 99999)
+
+    document.execCommand('copy')
+  }
+
+  get shareSlug () {
+    if (this.backendType === BackendType.Impostor) {
+      return location.origin + '/' + BackendType[this.backendType] + '/' + this.ip + '/' + this.gameCode
+    } else {
+      return location.origin + '/' + BackendType[this.backendType] + '/' + PublicLobbyRegion[this.publicLobbyRegion] + '/' + this.gameCode
+    }
+  }
 }
 </script>
 <style scoped lang="stylus">
+#slug-share {
+  position: absolute;
+  left: -9999px
+}
 </style>

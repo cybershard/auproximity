@@ -11,6 +11,11 @@ const routes: Array<RouteConfig> = [
     component: Home
   },
   {
+    path: '/:backend/:region/:gamecode',
+    name: 'Instant connect',
+    component: Home
+  },
+  {
     path: '*',
     redirect: '/'
   }

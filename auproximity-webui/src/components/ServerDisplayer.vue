@@ -2,7 +2,7 @@
   <v-card class="pa-5">
     <div class="text-center">
       <h2>{{ title }}</h2>
-      <h4>Current Map: {{ this.colliderMap }}</h4>
+      <h4 v-if="colliderMap !== 'Lobby'">Current Map: {{ this.colliderMap }}</h4>
     </div>
     <v-list v-if="$store.state.joinedRoom">
       <v-list-item-group>
@@ -46,13 +46,7 @@ import ClientListItem from '@/components/ClientListItem.vue'
   }
 })
 export default class ServerDisplayer extends Vue {
-  colliderMaps = [
-    'Skeld',
-    'Mira HQ',
-    'Polus'
-  ] as const;
-
-  colliderMap: 'Skeld' | 'Mira HQ' | 'Polus' = 'Skeld';
+  colliderMap: 'Skeld' | 'Mira HQ' | 'Polus' | 'Lobby' = 'Lobby';
 
   LERP_VALUE = 3;
 
@@ -128,7 +122,9 @@ export default class ServerDisplayer extends Vue {
 
   @Socket(ClientSocketEvents.SetMap)
   onSetMap (payload: { map: number }) {
-    this.colliderMap = this.colliderMaps[payload.map] || 'Skeld'
+    // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+    // @ts-ignore
+    this.colliderMap = ['Skeld', 'Mira HQ', 'Polus'][payload.map] || 'Skeld'
   }
 
   @Socket(ClientSocketEvents.SetGroup)

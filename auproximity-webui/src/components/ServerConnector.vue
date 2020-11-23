@@ -1,6 +1,6 @@
 <template>
   <v-card class="pa-5">
-    <v-form @submit.prevent="joinRoom">
+    <v-form v-model="valid" @submit.prevent="joinRoom">
       <v-text-field
         v-model="name"
         label="Name"
@@ -39,6 +39,7 @@
         item-text="regionName"
         item-value="regionType"
         label="Public Lobby Region"
+        :rules="[rules.publicLobbyRegion]"
         required
         outlined
       ></v-select>
@@ -54,7 +55,6 @@
         :disabled="!valid"
         color="info"
         class="mr-4"
-        type="submit"
         @click="copyShareSlug"
       >
         Share URL
@@ -76,8 +76,13 @@ import {
 
 @Component({})
 export default class ServerConnector extends Vue {
+  valid = false;
   name = '';
   gameCode = this.$route.params.gamecode ? this.$route.params.gamecode.slice(0, 6) : '';
+
+  // Backends
+  // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+  // @ts-ignore
   backendType: BackendType = BackendType[this.$route.params.backend || 'PublicLobby'] || BackendType.PublicLobby;
   items = [
     {
@@ -94,7 +99,12 @@ export default class ServerConnector extends Vue {
     }
   ];
 
+  // Impostor Backend
   ip = this.$route.params.region || '';
+
+  // Public Lobby Backend
+  // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+  // @ts-ignore
   publicLobbyRegion: PublicLobbyRegion = PublicLobbyRegion[this.$route.params.region || 'NorthAmerica'] || PublicLobbyRegion.NorthAmerica;
   regions = [
     {
@@ -117,6 +127,9 @@ export default class ServerConnector extends Vue {
     },
     counter6 (value: string) {
       return value.length === 6 || 'Max 6 characters'
+    },
+    publicLobbyRegion (value: string) {
+      return value in PublicLobbyRegion
     }
   };
 
@@ -151,15 +164,6 @@ export default class ServerConnector extends Vue {
     } else {
       return location.origin + '/' + BackendType[this.backendType] + '/' + PublicLobbyRegion[this.publicLobbyRegion] + '/' + this.gameCode
     }
-  }
-
-  get valid () {
-    return this.name &&
-      this.gameCode &&
-      this.gameCode.length === 6 &&
-      typeof this.backendType === 'number' &&
-      ((this.backendType === BackendType.Impostor && this.ip) ||
-        (this.backendType === BackendType.PublicLobby && typeof this.publicLobbyRegion === 'number'))
   }
 }
 </script>

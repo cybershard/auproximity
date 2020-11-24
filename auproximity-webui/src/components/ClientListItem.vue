@@ -23,7 +23,7 @@
     </template>
     <v-slider
       thumb-label
-      v-model="streamVolume"
+      v-model="stream.volumeNode.gain.value"
       track-color="grey"
       always-dirty
       min="0"
@@ -65,27 +65,15 @@ export default class ClientListItem extends Vue {
   me: string;
 
   decrementvol () {
-    this.streamVolume = Math.max(0, this.streamVolume - 5)
+    this.stream.volumeNode.gain.value = Math.max(0, this.stream.volumeNode.gain.value - 5)
   }
 
   incrementvol () {
-    this.streamVolume = Math.min(100, this.streamVolume + 5)
+    this.stream.volumeNode.gain.value = Math.min(100, this.stream.volumeNode.gain.value + 5)
   }
 
-  get streamVolume () {
-    const cl = this.streams.find(s => s.uuid === this.client.uuid)
-    if (cl) {
-      return cl.volumeNode.gain.value * 100
-    } else {
-      return 0
-    }
-  }
-
-  set streamVolume (val) {
-    const cl = this.streams.find(s => s.uuid === this.client.uuid)
-    if (cl) {
-      cl.volumeNode.gain.value = val / 100
-    }
+  get stream () {
+    return this.streams.find(s => s.uuid === this.client.uuid)
   }
 
   get isme () {

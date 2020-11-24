@@ -16,8 +16,8 @@
         ></audio>
       </span>
     </div>
-    <v-snackbar v-model="errorOccurred">
-      {{ error }}
+    <v-snackbar v-model="$store.state.showPopup">
+      {{ $store.state.message }}
     </v-snackbar>
   </v-card>
 </template>
@@ -54,9 +54,6 @@ export default class ServerDisplayer extends Vue {
 
   peer!: Peer;
   remoteStreams: RemoteStreamModel[] = [];
-
-  error = '';
-  errorOccurred = false;
 
   @Socket(ClientSocketEvents.SetUuid)
   onSetUuid (uuid: string) {
@@ -99,8 +96,18 @@ export default class ServerDisplayer extends Vue {
     this.remoteStreams.forEach(s => s.ctx.close())
     this.remoteStreams = []
     const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true })
+    const ctx = new AudioContext()
+    this.$store.state.micVolumeNode = ctx.createGain()
+    this.$store.state.micVolumeNode.gain.value = 1
+
+    const src = ctx.createMediaStreamSource(stream)
+    src.connect(this.$store.state.micVolumeNode)
+
+    const dest = ctx.createMediaStreamDestination()
+    this.$store.state.micVolumeNode.connect(dest)
+
     for (const p of payload) {
-      const call = this.peer.call(p.uuid, stream)
+      const call = this.peer.call(p.uuid, dest.stream)
       await this.connectCall(call)
     }
   }
@@ -182,8 +189,8 @@ export default class ServerDisplayer extends Vue {
 
   @Socket(ClientSocketEvents.Error)
   onError (payload: { err: string }) {
-    this.error = payload.err
-    this.errorOccurred = true
+    this.$store.state.showPopup = true
+    this.$store.state.message = payload.err
     this.remoteStreams.forEach(s => s.ctx.close())
     this.remoteStreams = []
     if (this.peer) this.peer.destroy()

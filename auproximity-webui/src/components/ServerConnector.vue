@@ -189,6 +189,9 @@ export default class ServerConnector extends Vue {
     copyText.setSelectionRange(0, 99999)
 
     document.execCommand('copy')
+
+    this.$store.state.showPopup = true
+    this.$store.state.message = 'Copied URL to clipboard!'
   }
 
   get shareSlug () {

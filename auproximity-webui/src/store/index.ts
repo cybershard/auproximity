@@ -12,6 +12,9 @@ const state: State = {
     gameCode: '',
     backendType: BackendType.NoOp
   },
+  micVolumeNode: null,
+  message: '',
+  showPopup: false,
   me: {
     uuid: '',
     name: '',
@@ -130,6 +133,9 @@ export interface State {
     gameCode: string;
     backendType: BackendType;
   };
+  micVolumeNode: GainNode|null;
+  message: string;
+  showPopup: boolean;
   me: ClientModel;
   clients: ClientModel[];
 }

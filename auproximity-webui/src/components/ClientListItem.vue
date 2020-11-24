@@ -31,19 +31,13 @@
       class="px-3"
     >
       <template v-slot:prepend>
-        <v-icon
-          @click="decrementvol"
-        >
-          fa-volume-mute
-        </v-icon>
+        <v-icon @click="decrementvol" v-if="isme">fa-microphone-slash</v-icon>
+        <v-icon @click="decrementvol" v-else>fa-volume-mute</v-icon>
       </template>
 
       <template v-slot:append>
-        <v-icon
-          @click="incrementvol"
-        >
-          fa-volume-up
-        </v-icon>
+        <v-icon @click="decrementvol" v-if="isme">fa-microphone</v-icon>
+        <v-icon @click="decrementvol" v-else>fa-volume-up</v-icon>
       </template>
     </v-slider>
   </v-list-group>
@@ -62,27 +56,39 @@ export default class ClientListItem extends Vue {
   streams!: RemoteStreamModel[];
 
   @Prop()
-  isme: boolean;
+  isme?: boolean;
 
   decrementvol () {
-    this.stream.volumeNode.gain.value = Math.max(0, this.stream.volumeNode.gain.value - 5)
+    if (this.streamVolume) this.streamVolume = Math.max(0, this.streamVolume - 5)
   }
 
   incrementvol () {
-    this.stream.volumeNode.gain.value = Math.min(100, this.stream.volumeNode.gain.value + 5)
+    if (this.streamVolume) this.streamVolume = Math.min(100, this.streamVolume + 5)
   }
 
   get streamVolume () {
-    if (this.stream) {
-      return this.stream.volumeNode.gain.value * 100
+    if (this.isme) {
+      if (this.$store.state.micVolumeNode) {
+        return this.$store.state.micVolumeNode.gain.value * 100
+      }
+    } else {
+      if (this.stream) {
+        return this.stream.volumeNode.gain.value * 100
+      }
     }
 
     return null
   }
 
   set streamVolume (val) {
-    if (this.stream) {
-      this.stream.volumeNode.gain.value = val / 100
+    if (this.isme) {
+      if (this.$store.state.micVolumeNode) {
+        this.$store.state.micVolumeNode.gain.value = val ? val / 100 : 0
+      }
+    } else {
+      if (this.stream) {
+        this.stream.volumeNode.gain.value = val ? val / 100 : 0
+      }
     }
   }
 

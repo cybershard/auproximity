@@ -5,9 +5,8 @@
       <h4 v-if="$store.state.joinedRoom">Current Map: {{ this.colliderMap }}</h4>
     </div>
     <v-list v-if="$store.state.joinedRoom">
-      <v-list-item-group>
-        <ClientListItem v-for="(client, i) in clients" :key="i" :client="client" :streams="remoteStreams" />
-      </v-list-item-group>
+      <ClientListItem :client="me" :streams="remoteStreams" me="true"/>
+      <ClientListItem v-for="(client, i) in clients" :key="i" :client="client" :streams="remoteStreams" me="false" />
     </v-list>
     <div>
       <span v-for="(value, i) in remoteStreams" :key="i">
@@ -19,16 +18,6 @@
     </div>
     <v-snackbar v-model="errorOccurred">
       {{ error }}
-      <template v-slot:action="{ attrs }">
-        <v-btn
-          color="pink"
-          text
-          v-bind="attrs"
-          @click="snackbar = false"
-        >
-          Close
-        </v-btn>
-      </template>
     </v-snackbar>
   </v-card>
 </template>
@@ -133,9 +122,12 @@ export default class ServerDisplayer extends Vue {
       const source = ctx.createMediaStreamSource(new MediaStream([remoteStream.getAudioTracks()[0]]))
       const gainNode = ctx.createGain()
       gainNode.gain.value = 1
+      const volumeNode = ctx.createGain()
+      volumeNode.gain.value = 1
       source.connect(gainNode)
-      gainNode.connect(ctx.destination)
-      this.remoteStreams.push({ uuid: call.peer, ctx, source, gainNode, remoteStream })
+      gainNode.connect(volumeNode)
+      volumeNode.connect(ctx.destination)
+      this.remoteStreams.push({ uuid: call.peer, ctx, source, gainNode, volumeNode, remoteStream })
     })
   }
 
@@ -244,6 +236,10 @@ export default class ServerDisplayer extends Vue {
 
   get clients () {
     return this.$store.state.clients
+  }
+
+  get me () {
+    return this.$store.state.me
   }
 }
 </script>

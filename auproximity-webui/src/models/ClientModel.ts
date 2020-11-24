@@ -17,5 +17,6 @@ export interface RemoteStreamModel {
   ctx: AudioContext;
   source: MediaStreamAudioSourceNode;
   gainNode: GainNode;
+  volumeNode: GainNode;
   remoteStream: MediaStream;
 }

@@ -1,5 +1,33 @@
 <template>
   <v-card class="pa-5">
+    <v-dialog
+      v-model="shareDialog"
+      max-width="600px"
+    >
+      <v-card>
+        <v-card-title>
+          <span>Join room {{gameCode}}</span>
+        </v-card-title>
+        <v-card-text>
+          <v-form @submit.prevent="joinRoom">
+            <v-text-field
+              v-model="shareName"
+              label="Name"
+              :rules="[rules.required]"
+              outlined
+            ></v-text-field>
+            <v-btn
+              :disabled="!shareName"
+              color="success"
+              class="mt-n2"
+              type="submit"
+            >
+              Join
+            </v-btn>
+          </v-form>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
     <v-form v-model="valid" @submit.prevent="joinRoom">
       <v-text-field
         v-model="name"
@@ -78,6 +106,8 @@ import {
 export default class ServerConnector extends Vue {
   valid = false;
   name = '';
+  shareName = '';
+  shareDialog = !!this.$route.params.gamecode;
   gameCode = this.$route.params.gamecode ? this.$route.params.gamecode.slice(0, 6) : '';
 
   // Backends
@@ -134,6 +164,9 @@ export default class ServerConnector extends Vue {
   };
 
   joinRoom () {
+    if (this.shareName) this.name = this.shareName
+    this.shareDialog = false
+
     const backendModel: BackendModel = {
       gameCode: this.gameCode.toUpperCase(),
       backendType: this.backendType

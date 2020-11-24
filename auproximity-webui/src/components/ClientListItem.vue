@@ -62,7 +62,7 @@ export default class ClientListItem extends Vue {
   streams!: RemoteStreamModel[];
 
   @Prop()
-  me: string;
+  isme: boolean;
 
   decrementvol () {
     this.stream.volumeNode.gain.value = Math.max(0, this.stream.volumeNode.gain.value - 5)
@@ -88,10 +88,6 @@ export default class ClientListItem extends Vue {
 
   get stream () {
     return this.streams.find(s => s.uuid === this.client.uuid)
-  }
-
-  get isme () {
-    return this.me === 'true'
   }
 }
 </script>

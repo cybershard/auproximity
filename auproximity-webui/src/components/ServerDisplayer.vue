@@ -5,8 +5,8 @@
       <h4 v-if="$store.state.joinedRoom">Current Map: {{ this.colliderMap }}</h4>
     </div>
     <v-list v-if="$store.state.joinedRoom">
-      <ClientListItem :client="me" :streams="remoteStreams" me="true"/>
-      <ClientListItem v-for="(client, i) in clients" :key="i" :client="client" :streams="remoteStreams" me="false" />
+      <ClientListItem :client="me" :streams="remoteStreams" :isme="true"/>
+      <ClientListItem v-for="(client, i) in clients" :key="i" :client="client" :streams="remoteStreams" :isme="false" />
     </v-list>
     <div>
       <span v-for="(value, i) in remoteStreams" :key="i">

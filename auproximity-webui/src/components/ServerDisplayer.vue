@@ -16,8 +16,8 @@
         ></audio>
       </span>
     </div>
-    <v-snackbar v-model="$store.state.showPopup">
-      {{ $store.state.message }}
+    <v-snackbar v-model="showSnackbar">
+      {{ snackbarMessage }}
     </v-snackbar>
   </v-card>
 </template>

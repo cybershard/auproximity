@@ -64,7 +64,6 @@ export default class Room {
             // store the state of this client <-> roomGroup in the room
             // this is to restore the room group if the client disconnects and reconnects
             this.clientRoomGroupMap.set(payload.name, payload.group);
-
             const client = this.members.find(c => c.name === payload.name);
             if (client) {
                 // if the client connection exists, update all clients about the new group
@@ -74,15 +73,18 @@ export default class Room {
             }
         });
         this.backendAdapter.on(BackendEvent.AllPlayerJoinGroups, (payload: { group: RoomGroup }) => {
-
-            // store the state of this client <-> roomGroup in the room
-            // this is to restore the room group if the client disconnects and reconnects
-            this.clientRoomGroupMap.forEach((value, key) => {
-                this.clientRoomGroupMap.set(key, payload.group);
-            });
-
             this.members.forEach(client => {
+                // store the state of this client <-> roomGroup in the room
+                // this is to restore the room group if the client disconnects and reconnects
+                this.clientRoomGroupMap.set(client.name, payload.group);
+
                 this.members.forEach(c => c.setGroupOf(client.uuid, payload.group));
+            });
+        });
+        this.backendAdapter.on(BackendEvent.PlayerFromJoinGroup, (payload: { from: RoomGroup; to: RoomGroup }) => {
+            const fromClients = this.members.filter(c => c.group === payload.from);
+            this.members.forEach(c => {
+                fromClients.forEach(client => c.setGroupOf(client.uuid, payload.to));
             });
         });
         this.backendAdapter.on(BackendEvent.Error, async (payload: { err: string }) => {
@@ -96,13 +98,9 @@ export default class Room {
     // Public methods
     addClient(client: Client): void {
         // restore roomgroup for a client if it exists
-        console.log("adding client: ", client)
         if (this.clientRoomGroupMap.has(client.name)) {
             client.setGroupOf(client.uuid, this.clientRoomGroupMap.get(client.name));
         }
-        console.log("The roomgroupmap is: ", this.clientRoomGroupMap);
-        console.log("The client after setting group is now: ", client);
-
         client.setMap(this.map);
 
         this.members.forEach(c => c.addClient(client.uuid, client.name, client.pose, client.group));

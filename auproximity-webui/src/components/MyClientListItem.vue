@@ -63,7 +63,7 @@ export default class MyClientListItem extends Vue {
     if (typeof this.mic.volumeNode !== 'undefined') {
       return this.mic.volumeNode.gain.value * 100
     }
-    return null
+    return undefined
   }
 
   set streamVolume (val) {

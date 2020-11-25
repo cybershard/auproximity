@@ -36,7 +36,8 @@ export enum MapIdModel {
 // Room groups
 export enum RoomGroup {
     Main,
-    Spectator
+    Spectator,
+    Muted
 }
 
 // Actual backend class
@@ -47,7 +48,7 @@ export abstract class BackendAdapter extends EventEmitter {
     }
     abstract initialize(): void;
     abstract destroy(): void;
-    emitMapChange(map: MapIdModel) {
+    emitMapChange(map: MapIdModel): void {
         this.emit(BackendEvent.MapChange, { map });
     }
     emitPlayerPose(name: string, pose: Pose): void {
@@ -62,7 +63,10 @@ export abstract class BackendAdapter extends EventEmitter {
     emitAllPlayerJoinGroups(group: RoomGroup): void {
         this.emit(BackendEvent.AllPlayerJoinGroups, { group });
     }
-    emitError(err: string) {
+    emitPlayerFromJoinGroup(from: RoomGroup, to: RoomGroup) {
+        this.emit(BackendEvent.PlayerFromJoinGroup, { from, to });
+    }
+    emitError(err: string): void {
         this.emit(BackendEvent.Error, { err });
     }
 }
@@ -72,6 +76,7 @@ export enum BackendEvent {
     PlayerJoinGroup = "playerjoingroup",
     AllPlayerPoses = "allplayerposes",
     AllPlayerJoinGroups = "allplayerjoingroup",
+    PlayerFromJoinGroup = "playerfromjoingroup",
     Error = "error"
 }
 

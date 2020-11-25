@@ -18,6 +18,9 @@ export default class ImpostorBackend extends BackendAdapter {
         try {
             this.connection = new HubConnectionBuilder()
                 .withUrl(`http://${this.backendModel.ip}:${IMPOSTOR_BACKEND_PORT}/hub`).build();
+            this.connection.on(ImpostorSocketEvents.MapChange, (id: number) => {
+                this.emitMapChange(id);
+            });
             this.connection.on(ImpostorSocketEvents.GameStarted, () => {
                 this.emitAllPlayerJoinGroups(RoomGroup.Main);
             });
@@ -30,9 +33,17 @@ export default class ImpostorBackend extends BackendAdapter {
             this.connection.on(ImpostorSocketEvents.PlayerExiled, (name: string) => {
                 this.emitPlayerJoinGroup(name, RoomGroup.Spectator);
             });
+            this.connection.on(ImpostorSocketEvents.CommsSabotage, (fix: boolean) => {
+                if (fix) {
+                    this.emitPlayerFromJoinGroup(RoomGroup.Muted, RoomGroup.Main);
+                } else {
+                    this.emitPlayerFromJoinGroup(RoomGroup.Main, RoomGroup.Muted);
+                }
+            });
             this.connection.on(ImpostorSocketEvents.GameEnd, () => {
                 this.emitAllPlayerJoinGroups(RoomGroup.Spectator);
             });
+
             console.log(`Initialized Impostor Backend at http://${this.backendModel.ip}:${IMPOSTOR_BACKEND_PORT}/hub`);
             this.connection.start()
                 .then(() => this.connection.send(ImpostorSocketEvents.TrackGame, this.backendModel.gameCode))
@@ -49,9 +60,11 @@ export default class ImpostorBackend extends BackendAdapter {
 
 export enum ImpostorSocketEvents {
     TrackGame  = "TrackGame",
+    MapChange = "MapChange",
     GameStarted = "GameStarted",
     PlayerMove = "PlayerMove",
     MeetingCalled = "MeetingCalled",
     PlayerExiled = "PlayerExiled",
+    CommsSabotage = "CommsSabotage",
     GameEnd = "GameEnd"
 }

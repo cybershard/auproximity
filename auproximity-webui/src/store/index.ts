@@ -119,7 +119,6 @@ export default new Vuex.Store({
       }
     },
     [`socket_${ClientSocketEvents.SetGroup}`] ({ commit, state }, payload: { uuid: string; group: RoomGroup }) {
-      console.log(payload)
       if (payload.uuid === state.me.uuid) {
         commit('setGroup', payload.group)
       } else {

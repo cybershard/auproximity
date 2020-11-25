@@ -7,8 +7,11 @@ import {
     RoomGroup
 } from "../types/Backend";
 import {
-    AmongusClient, BufferReader,
-    DebugOptions, LerpValue, MapID,
+    AmongusClient,
+    BufferReader,
+    DebugOptions,
+    LerpValue,
+    MapID,
     MasterServers,
     MessageID,
     PacketID,
@@ -20,10 +23,12 @@ import {
     GameDataMessage,
     GameDataPayload,
     GameDataToPayload,
-    Payload, PlayerSpawn,
+    Payload,
+    PlayerSpawn,
     RPCMessage,
     SpawnMessage
 } from "../../amongus-protocol/ts/lib/interfaces/Packets";
+import {SystemType} from '../../amongus-protocol/ts/lib/constants/Enums';
 
 export default class PublicLobbyBackend extends BackendAdapter {
     backendModel: PublicLobbyBackendModel
@@ -40,6 +45,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
         transformNetId: number;
     }[] = [];
     client: AmongusClient;
+    currentMap: MapID
 
     async initialize(): Promise<void> {
         try {
@@ -65,7 +71,6 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 servers = MasterServers.AS[0];
             }
 
-            console.log(servers[0], servers[1], this.backendModel.gameCode);
             try {
                 await this.client.connect(servers[0], servers[1], "auprox");
             } catch (e) {
@@ -83,10 +88,9 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 this.emitError("Couldn't join the game, make sure that the game hasn't started and there is a spot for the client!");
                 return;
             }
-            console.log("awaiting spawn before");
             await game.awaitSpawns();
+            this.currentMap = game.options.mapID;
             this.emitMapChange(MapIdModel[MapID[game.options.mapID]]);
-            console.log("awaited spawn");
             game.clients.forEach(client => this.playerData.push({
                 name: client.name,
                 clientId: client.id,
@@ -95,7 +99,6 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 transformNetId: client.Player.CustomNetworkTransform.netid
             }));
             await this.client.disconnect();
-            console.log("disconnected with data: ", this.playerData);
 
             // restart new client
             this.client = new AmongusClient({
@@ -117,7 +120,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
                     await this.client.join(this.backendModel.gameCode, {
                         doSpawn: false
                     });
-                    console.log("ended game")
+                    console.log("ended game");
                 } else if (payload.payloadid === PayloadID.RemovePlayer) {
                     this.playerData = this.playerData.filter(p => p.clientId !== payload.clientid);
                     // Handler for if the game sets us to host. Might be a hacky way.
@@ -158,9 +161,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
             };
 
             const handleRPC = (rpcPart: RPCMessage) => {
-                if (rpcPart.rpcid === RPCID.SyncSettings) {
-                    this.emitMapChange(MapIdModel[MapID[game.options.mapID]]);
-                } else if (rpcPart.rpcid === RPCID.StartMeeting) {
+                if (rpcPart.rpcid === RPCID.StartMeeting) {
                     this.emitAllPlayerPoses({ x: 0, y: 0 });
                     console.log("meeting started");
                 } else if (rpcPart.rpcid === RPCID.VotingComplete) {
@@ -187,6 +188,20 @@ export default class PublicLobbyBackend extends BackendAdapter {
                         });
                     }
                     console.log("set someone name to: " + rpcPart.name);
+                } else if (rpcPart.rpcid === RPCID.RepairSystem) {
+                    if (rpcPart.systemtype === SystemType.Sabotage && rpcPart.amount === SystemType.Communications) {
+                        this.emitPlayerFromJoinGroup(RoomGroup.Main, RoomGroup.Muted);
+                    } else if (rpcPart.systemtype === SystemType.Communications) {
+                        if (this.currentMap === MapID.TheSkeld || this.currentMap === MapID.Polus) {
+                            if ((rpcPart.amount & 0x80) == 0) {
+                                this.emitPlayerFromJoinGroup(RoomGroup.Muted, RoomGroup.Main);
+                            }
+                        } else if (this.currentMap === MapID.MiraHQ) {
+                            if ((rpcPart.amount & 0x10) != 0) {
+                                this.emitPlayerFromJoinGroup(RoomGroup.Muted, RoomGroup.Main);
+                            }
+                        }
+                    }
                 }
             };
 
@@ -228,7 +243,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
     async destroy(): Promise<void> {
         if (this.client && this.client.socket) {
             await this.client.disconnect();
-            this.client = null;
+            this.client = undefined;
         }
         console.log(`Destroyed PublicLobbyBackend for game: ${this.backendModel.gameCode}`);
     }

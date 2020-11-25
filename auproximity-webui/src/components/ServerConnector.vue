@@ -60,7 +60,7 @@
         >
           Share URL
         </v-btn>
-        <input v-model="shareSlug" id="slug-share">
+        <input :value="shareSlug" id="slug-share">
       </v-form>
     </v-card>
     <JoinModal :game-code="gameCode" @joinroom="joinRoom($event)"/>

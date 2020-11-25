@@ -165,7 +165,7 @@ export default class ServerDisplayer extends Vue {
 
   @Socket(ClientSocketEvents.SetGroup)
   onSetGroup (payload: {uuid: string; group: RoomGroup }) {
-    if (RoomGroup.Spectator) {
+    if (payload.group === RoomGroup.Spectator) {
       if (payload.uuid === this.$store.state.me.uuid) {
         this.remoteStreams.forEach(s => {
           s.gainNode.gain.value = 1
@@ -183,7 +183,7 @@ export default class ServerDisplayer extends Vue {
         if (!stream) return
         stream.gainNode.gain.value = 0
       }
-    } else if (RoomGroup.Muted) {
+    } else if (payload.group === RoomGroup.Muted) {
       if (payload.uuid === this.$store.state.me.uuid) {
         this.remoteStreams.forEach(s => {
           s.gainNode.gain.value = 0
@@ -262,14 +262,12 @@ export default class ServerDisplayer extends Vue {
   }
 
   hypotPose (p1: Pose, p2: Pose) {
-    console.log('Hypot: ', Math.hypot(p1.x - p2.x, p1.y - p2.y))
     return Math.hypot(p1.x - p2.x, p1.y - p2.y)
   }
 
   lerp (distance: number) {
     const trueVolume = 1 - (distance / this.LERP_VALUE)
     // clamp above 0, and then below 1
-    console.log('truevol:', trueVolume)
     return Math.min(Math.max(trueVolume, 0), 1)
   }
 

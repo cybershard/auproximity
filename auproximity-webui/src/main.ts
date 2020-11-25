@@ -8,6 +8,7 @@ import { io } from 'socket.io-client'
 import { SOCKETIO_URL } from '@/consts'
 import '@fortawesome/fontawesome-free/css/all.min.css'
 
+Vue.config.devtools = true
 Vue.config.productionTip = false
 // eslint-disable-next-line
 // @ts-ignore

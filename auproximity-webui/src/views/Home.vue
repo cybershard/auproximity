@@ -2,7 +2,7 @@
   <v-container>
     <v-row>
       <v-col cols="12" md="6">
-        <ServerConnector @joinRoom="joinRoom($event)"/>
+        <ServerConnector @joinroom="joinRoom($event)"/>
       </v-col>
       <v-col cols="12" md="6">
         <ServerDisplayer />

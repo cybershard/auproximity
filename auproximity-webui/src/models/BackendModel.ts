@@ -24,5 +24,6 @@ export enum PublicLobbyRegion {
 // Room groups
 export enum RoomGroup {
   Main,
-  Spectator
+  Spectator,
+  Muted
 }

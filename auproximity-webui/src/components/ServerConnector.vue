@@ -1,95 +1,73 @@
 <template>
-  <v-card class="pa-5">
-    <v-dialog
-      v-model="shareDialog"
-      max-width="600px"
-    >
-      <v-card>
-        <v-card-title>
-          <span>Join room {{gameCode}}</span>
-        </v-card-title>
-        <v-card-text>
-          <v-form @submit.prevent="joinRoom">
-            <v-text-field
-              v-model="shareName"
-              label="Name"
-              :rules="[rules.required]"
-              outlined
-            ></v-text-field>
-            <v-btn
-              :disabled="!shareName"
-              color="success"
-              class="mt-n2"
-              type="submit"
-            >
-              Join
-            </v-btn>
-          </v-form>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
-    <v-form v-model="valid" @submit.prevent="joinRoom">
-      <v-text-field
-        v-model="name"
-        label="Name"
-        :rules="[rules.required]"
-        outlined
-      ></v-text-field>
-      <v-text-field
-        v-model="gameCode"
-        label="Game Code"
-        :rules="[rules.required, rules.counter6]"
-        counter="6"
-        maxlength="6"
-        outlined
-      ></v-text-field>
-      <v-select
-        v-model="backendType"
-        :items="items"
-        item-text="backendName"
-        item-value="backendType"
-        :rules="[rules.required]"
-        label="Server Backend"
-        required
-        outlined
-      ></v-select>
-      <v-text-field
-        v-if="backendType === 2"
-        v-model="ip"
-        label="Domain name (example.com) or IP Address of the server"
-        :rules="[rules.required]"
-        outlined
-      ></v-text-field>
-      <v-select
-        v-if="backendType === 1"
-        v-model="publicLobbyRegion"
-        :items="regions"
-        item-text="regionName"
-        item-value="regionType"
-        label="Public Lobby Region"
-        :rules="[rules.publicLobbyRegion]"
-        required
-        outlined
-      ></v-select>
-      <v-btn
-        :disabled="!valid"
-        color="success"
-        class="mr-4"
-        type="submit"
-      >
-        Join
-      </v-btn>
-      <v-btn
-        :disabled="!valid"
-        color="info"
-        class="mr-4"
-        @click="copyShareSlug"
-      >
-        Share URL
-      </v-btn>
-      <input v-model="shareSlug" id="slug-share">
-    </v-form>
-  </v-card>
+  <div>
+    <v-card class="pa-5">
+      <v-form v-model="valid" @submit.prevent="joinRoom(gameCode)">
+        <v-text-field
+          v-model="name"
+          label="Name"
+          :rules="[rules.required]"
+          outlined
+        ></v-text-field>
+        <v-text-field
+          v-model="gameCode"
+          label="Game Code"
+          :rules="[rules.required, rules.counter6]"
+          counter="6"
+          maxlength="6"
+          outlined
+        ></v-text-field>
+        <v-select
+          v-model="backendType"
+          :items="items"
+          item-text="backendName"
+          item-value="backendType"
+          :rules="[rules.required]"
+          label="Server Backend"
+          required
+          outlined
+        ></v-select>
+        <v-text-field
+          v-if="backendType === 2"
+          v-model="ip"
+          label="Domain name (example.com) or IP Address of the server"
+          :rules="[rules.required]"
+          outlined
+        ></v-text-field>
+        <v-select
+          v-if="backendType === 1"
+          v-model="publicLobbyRegion"
+          :items="regions"
+          item-text="regionName"
+          item-value="regionType"
+          label="Public Lobby Region"
+          :rules="[rules.publicLobbyRegion]"
+          required
+          outlined
+        ></v-select>
+        <v-btn
+          :disabled="!valid"
+          color="success"
+          class="mr-4"
+          type="submit"
+        >
+          Join
+        </v-btn>
+        <v-btn
+          :disabled="!valid"
+          color="info"
+          class="mr-4"
+          @click="copyShareSlug"
+        >
+          Share URL
+        </v-btn>
+        <input v-model="shareSlug" id="slug-share">
+      </v-form>
+    </v-card>
+    <JoinModal :game-code="gameCode" @joinroom="joinRoom($event)"/>
+    <v-snackbar v-model="showSnackbar">
+      Copied URL to clipboard!
+    </v-snackbar>
+  </div>
 </template>
 
 <script lang="ts">
@@ -101,13 +79,15 @@ import {
   PublicLobbyBackendModel,
   PublicLobbyRegion
 } from '@/models/BackendModel'
+import JoinModal from '@/components/JoinModal.vue'
 
-@Component({})
+@Component({
+  components: { JoinModal }
+})
 export default class ServerConnector extends Vue {
   valid = false;
+  showSnackbar = false;
   name = '';
-  shareName = '';
-  shareDialog = !!this.$route.params.gamecode;
   gameCode = this.$route.params.gamecode ? this.$route.params.gamecode.slice(0, 6) : '';
 
   // Backends
@@ -138,15 +118,15 @@ export default class ServerConnector extends Vue {
   publicLobbyRegion: PublicLobbyRegion = PublicLobbyRegion[this.$route.params.region || 'NorthAmerica'] || PublicLobbyRegion.NorthAmerica;
   regions = [
     {
-      regionName: PublicLobbyRegion[PublicLobbyRegion.NorthAmerica],
+      regionName: 'North America',
       regionType: PublicLobbyRegion.NorthAmerica
     },
     {
-      regionName: PublicLobbyRegion[PublicLobbyRegion.Europe],
+      regionName: 'Europe',
       regionType: PublicLobbyRegion.Europe
     },
     {
-      regionName: PublicLobbyRegion[PublicLobbyRegion.Asia],
+      regionName: 'Asia',
       regionType: PublicLobbyRegion.Asia
     }
   ];
@@ -163,12 +143,10 @@ export default class ServerConnector extends Vue {
     }
   };
 
-  joinRoom () {
-    if (this.shareName) this.name = this.shareName
-    this.shareDialog = false
-
+  joinRoom (gameCode: string) {
+    console.log(gameCode)
     const backendModel: BackendModel = {
-      gameCode: this.gameCode.toUpperCase(),
+      gameCode: gameCode.toUpperCase(),
       backendType: this.backendType
     }
     if (this.backendType === BackendType.PublicLobby) {
@@ -176,7 +154,7 @@ export default class ServerConnector extends Vue {
     } else if (this.backendType === BackendType.Impostor) {
       (backendModel as ImpostorBackendModel).ip = this.ip
     }
-    this.$emit('joinRoom', {
+    this.$emit('joinroom', {
       name: this.name,
       backendModel
     })
@@ -189,9 +167,7 @@ export default class ServerConnector extends Vue {
     copyText.setSelectionRange(0, 99999)
 
     document.execCommand('copy')
-
-    this.$store.state.showPopup = true
-    this.$store.state.message = 'Copied URL to clipboard!'
+    this.showSnackbar = true
   }
 
   get shareSlug () {

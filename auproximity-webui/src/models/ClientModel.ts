@@ -20,3 +20,8 @@ export interface RemoteStreamModel {
   volumeNode: GainNode;
   remoteStream: MediaStream;
 }
+
+export interface MyMicModel {
+  volumeNode: GainNode | undefined;
+  destStream: MediaStreamAudioDestinationNode | undefined;
+}

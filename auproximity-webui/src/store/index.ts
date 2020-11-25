@@ -1,9 +1,10 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 import ClientSocketEvents from '@/models/ClientSocketEvents'
-import ClientModel, { Pose } from '@/models/ClientModel'
+import ClientModel, { MyMicModel, Pose } from '@/models/ClientModel'
 import { BackendModel, BackendType, RoomGroup } from '@/models/BackendModel'
 
+Vue.config.devtools = true
 Vue.use(Vuex)
 
 const state: State = {
@@ -12,9 +13,10 @@ const state: State = {
     gameCode: '',
     backendType: BackendType.NoOp
   },
-  micVolumeNode: null,
-  message: '',
-  showPopup: false,
+  mic: {
+    volumeNode: undefined,
+    destStream: undefined
+  },
   me: {
     uuid: '',
     name: '',
@@ -88,21 +90,21 @@ export default new Vuex.Store({
     [`socket_${ClientSocketEvents.SetUuid}`] ({ commit }, uuid: string) {
       commit('setUuid', uuid)
     },
-    [`socket_${ClientSocketEvents.AddClient}`] ({ commit }, payload: { uuid: string; name: string }) {
+    [`socket_${ClientSocketEvents.AddClient}`] ({ commit }, payload: { uuid: string; name: string; pose: Pose; group: RoomGroup }) {
       const client: ClientModel = {
         uuid: payload.uuid,
         name: payload.name,
-        pose: { x: 0, y: 0 },
-        group: RoomGroup.Main
+        pose: payload.pose,
+        group: payload.group
       }
       commit('addClient', client)
     },
-    [`socket_${ClientSocketEvents.SetAllClients}`] ({ commit }, payload: { uuid: string; name: string }[]) {
+    [`socket_${ClientSocketEvents.SetAllClients}`] ({ commit }, payload: { uuid: string; name: string; pose: Pose; group: RoomGroup }[]) {
       const clients: ClientModel[] = payload.map(c => ({
         uuid: c.uuid,
         name: c.name,
-        pose: { x: 0, y: 0 },
-        group: RoomGroup.Main
+        pose: c.pose,
+        group: c.group
       }))
       commit('setAllClients', clients)
     },
@@ -117,6 +119,7 @@ export default new Vuex.Store({
       }
     },
     [`socket_${ClientSocketEvents.SetGroup}`] ({ commit, state }, payload: { uuid: string; group: RoomGroup }) {
+      console.log(payload)
       if (payload.uuid === state.me.uuid) {
         commit('setGroup', payload.group)
       } else {
@@ -133,9 +136,7 @@ export interface State {
     gameCode: string;
     backendType: BackendType;
   };
-  micVolumeNode: GainNode|null;
-  message: string;
-  showPopup: boolean;
+  mic: MyMicModel;
   me: ClientModel;
   clients: ClientModel[];
 }

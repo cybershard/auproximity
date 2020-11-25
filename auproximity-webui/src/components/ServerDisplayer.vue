@@ -5,7 +5,7 @@
       <h4 v-if="$store.state.joinedRoom">Current Map: {{ this.colliderMap }}</h4>
     </div>
     <v-list v-if="$store.state.joinedRoom">
-      <ClientListItem :client="me" :streams="remoteStreams" :isme="true"/>
+      <MyClientListItem :client="me" :mic="mymic"/>
       <ClientListItem v-for="(client, i) in clients" :key="i" :client="client" :streams="remoteStreams" :isme="false" />
     </v-list>
     <div>
@@ -33,9 +33,10 @@ import { RoomGroup } from '@/models/BackendModel'
 import { colliderMaps } from '@/models/ColliderMaps'
 import intersect from 'path-intersection'
 import ClientListItem from '@/components/ClientListItem.vue'
+import MyClientListItem from '@/components/MyClientListItem.vue'
 
 @Component({
-  components: { ClientListItem },
+  components: { MyClientListItem, ClientListItem },
   directives: {
     audio (el: HTMLElement, { value }) {
       const elem: HTMLAudioElement = el as HTMLAudioElement
@@ -50,7 +51,7 @@ import ClientListItem from '@/components/ClientListItem.vue'
 export default class ServerDisplayer extends Vue {
   colliderMap: 'Skeld' | 'Mira HQ' | 'Polus' = 'Skeld';
 
-  LERP_VALUE = 3;
+  LERP_VALUE = 2.7;
 
   peer!: Peer;
   remoteStreams: RemoteStreamModel[] = [];
@@ -66,11 +67,12 @@ export default class ServerDisplayer extends Vue {
     this.peer.on('open', id => console.log('My peer ID is: ' + id))
     this.peer.on('error', error => console.log('PeerJS Error: ' + error))
     this.peer.on('call', async (call) => {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true })
       if (this.$store.state.clients.find(
         (client: ClientModel) => client.uuid === call.peer)) {
         await this.connectCall(call)
-        call.answer(stream) // Answer the call with an A/V stream.
+
+        // If the user has not given permission for audio, this will be undefined, and we won't answer the call.
+        if (this.$store.state.micDestStream) call.answer(this.$store.state.micDestStream.stream)
       }
     })
   }
@@ -83,7 +85,7 @@ export default class ServerDisplayer extends Vue {
   }
 
   @Socket(ClientSocketEvents.SetAllClients)
-  async onAddClient (payload: { uuid: string; name: string }[]) {
+  async onSetAllClients (payload: { uuid: string; name: string }[]) {
     if (!this.peer) {
       this.peer = new Peer(this.$store.state.uuid, {
         host: SERVER_HOSTNAME,
@@ -95,19 +97,11 @@ export default class ServerDisplayer extends Vue {
 
     this.remoteStreams.forEach(s => s.ctx.close())
     this.remoteStreams = []
+
     const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true })
-    const ctx = new AudioContext()
-    this.$store.state.micVolumeNode = ctx.createGain()
-    this.$store.state.micVolumeNode.gain.value = 1
-
-    const src = ctx.createMediaStreamSource(stream)
-    src.connect(this.$store.state.micVolumeNode)
-
-    const dest = ctx.createMediaStreamDestination()
-    this.$store.state.micVolumeNode.connect(dest)
-
+    await this.setupMyStream(stream)
     for (const p of payload) {
-      const call = this.peer.call(p.uuid, dest.stream)
+      const call = this.peer.call(p.uuid, this.$store.state.mic.destStream.stream)
       await this.connectCall(call)
     }
   }
@@ -123,17 +117,34 @@ export default class ServerDisplayer extends Vue {
     })
   }
 
+  async setupMyStream (stream: MediaStream) {
+    const ctx = new AudioContext()
+    const src = ctx.createMediaStreamSource(stream)
+    const gainNode = ctx.createGain()
+    const dest = ctx.createMediaStreamDestination()
+
+    src.connect(gainNode)
+    gainNode.connect(dest)
+
+    gainNode.gain.value = 0
+
+    this.$store.state.mic.volumeNode = gainNode
+    this.$store.state.mic.destStream = dest
+  }
+
   async connectCall (call: Peer.MediaConnection) {
     call.on('stream', remoteStream => {
       const ctx = new AudioContext()
       const source = ctx.createMediaStreamSource(new MediaStream([remoteStream.getAudioTracks()[0]]))
       const gainNode = ctx.createGain()
-      gainNode.gain.value = 1
       const volumeNode = ctx.createGain()
-      volumeNode.gain.value = 1
+
       source.connect(gainNode)
       gainNode.connect(volumeNode)
       volumeNode.connect(ctx.destination)
+
+      gainNode.gain.value = 1
+      volumeNode.gain.value = 1
       this.remoteStreams.push({ uuid: call.peer, ctx, source, gainNode, volumeNode, remoteStream })
     })
   }
@@ -160,6 +171,28 @@ export default class ServerDisplayer extends Vue {
         const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
         if (!stream) return
         stream.gainNode.gain.value = 1
+      } else if (this.$store.state.me.group === RoomGroup.Muted) {
+        const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
+        if (!stream) return
+        stream.gainNode.gain.value = 0
+      }
+    } else if (RoomGroup.Muted) {
+      if (payload.uuid === this.$store.state.me.uuid) {
+        this.remoteStreams.forEach(s => {
+          s.gainNode.gain.value = 0
+        })
+      } else if (this.$store.state.me.group === RoomGroup.Main) {
+        const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
+        if (!stream) return
+        stream.gainNode.gain.value = 0
+      } else if (this.$store.state.me.group === RoomGroup.Spectator) {
+        const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
+        if (!stream) return
+        stream.gainNode.gain.value = 1
+      } else if (this.$store.state.me.group === RoomGroup.Muted) {
+        const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
+        if (!stream) return
+        stream.gainNode.gain.value = 0
       }
     }
   }
@@ -173,17 +206,17 @@ export default class ServerDisplayer extends Vue {
     //      recalc volume with colliders
     //    if uuid <-> remoteClient is ghost
     //      skip and set 0 volume again
-    if (this.$store.state.me.group === RoomGroup.Spectator) return
-
-    if (this.$store.state.me.uuid === payload.uuid) {
-      // change volume of everyone relative to our new position
-      this.remoteStreams.forEach(s => {
-        this.recalcVolumeForRemoteStream(s)
-      })
-    } else {
-      const remoteStream = this.remoteStreams.find(s => s.uuid === payload.uuid)
-      if (!remoteStream) return
-      this.recalcVolumeForRemoteStream(remoteStream)
+    if (this.$store.state.me.group === RoomGroup.Main) {
+      if (this.$store.state.me.uuid === payload.uuid) {
+        // change volume of everyone relative to our new position
+        this.remoteStreams.forEach(s => {
+          this.recalcVolumeForRemoteStream(s)
+        })
+      } else {
+        const remoteStream = this.remoteStreams.find(s => s.uuid === payload.uuid)
+        if (!remoteStream) return
+        this.recalcVolumeForRemoteStream(remoteStream)
+      }
     }
   }
 
@@ -206,7 +239,7 @@ export default class ServerDisplayer extends Vue {
       } else {
         stream.gainNode.gain.value = this.lerp(this.hypotPose(this.$store.state.me.pose, client.pose))
       }
-    } else if (client.group === RoomGroup.Spectator) {
+    } else if (client.group === RoomGroup.Spectator || client.group === RoomGroup.Muted) {
       // If they are spectator
       stream.gainNode.gain.value = 0
     }
@@ -247,6 +280,10 @@ export default class ServerDisplayer extends Vue {
 
   get me () {
     return this.$store.state.me
+  }
+
+  get mymic () {
+    return this.$store.state.mic
   }
 }
 </script>

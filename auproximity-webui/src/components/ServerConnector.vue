@@ -1,7 +1,7 @@
 <template>
   <div>
     <v-card class="pa-5">
-      <v-form v-model="valid" @submit.prevent="joinRoom(gameCode)">
+      <v-form v-model="valid" @submit.prevent="joinRoom(name)">
         <v-text-field
           v-model="name"
           label="Name"
@@ -143,9 +143,10 @@ export default class ServerConnector extends Vue {
     }
   };
 
-  joinRoom (gameCode: string) {
+  joinRoom (name: string) {
+    this.name = name
     const backendModel: BackendModel = {
-      gameCode: gameCode.toUpperCase(),
+      gameCode: this.gameCode.toUpperCase(),
       backendType: this.backendType
     }
     if (this.backendType === BackendType.PublicLobby) {
@@ -154,7 +155,7 @@ export default class ServerConnector extends Vue {
       (backendModel as ImpostorBackendModel).ip = this.ip
     }
     this.$emit('joinroom', {
-      name: this.name,
+      name: name,
       backendModel
     })
   }

@@ -1,7 +1,9 @@
 <template>
   <v-list-group>
     <template v-slot:activator>
-      <i class="fas fa-user"></i>
+      <v-list-item-icon>
+        <i class="fas fa-user"></i>
+      </v-list-item-icon>
       <v-list-item-content>
         <v-list-item-title>
           <span class="float-left">

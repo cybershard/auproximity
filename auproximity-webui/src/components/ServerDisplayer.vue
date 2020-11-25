@@ -6,7 +6,7 @@
     </div>
     <v-list v-if="$store.state.joinedRoom">
       <MyClientListItem :client="me" :mic="mymic"/>
-      <ClientListItem v-for="(client, i) in clients" :key="i" :client="client" :streams="remoteStreams" :isme="false" />
+      <ClientListItem v-for="(client, i) in clients" :key="i" :client="client" :streams="remoteStreams" />
     </v-list>
     <div>
       <span v-for="(value, i) in remoteStreams" :key="i">
@@ -49,6 +49,9 @@ import MyClientListItem from '@/components/MyClientListItem.vue'
   }
 })
 export default class ServerDisplayer extends Vue {
+  showSnackbar = false;
+  snackbarMessage = '';
+
   colliderMap: 'Skeld' | 'Mira HQ' | 'Polus' = 'Skeld';
 
   LERP_VALUE = 2.7;
@@ -72,7 +75,9 @@ export default class ServerDisplayer extends Vue {
         await this.connectCall(call)
 
         // If the user has not given permission for audio, this will be undefined, and we won't answer the call.
-        if (this.$store.state.micDestStream) call.answer(this.$store.state.micDestStream.stream)
+        if (this.$store.state.mic.destStream) {
+          call.answer(this.$store.state.mic.destStream.stream)
+        }
       }
     })
   }
@@ -98,8 +103,10 @@ export default class ServerDisplayer extends Vue {
     this.remoteStreams.forEach(s => s.ctx.close())
     this.remoteStreams = []
 
-    const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true })
-    await this.setupMyStream(stream)
+    if (!this.$store.state.mic.volumeNode) {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true })
+      this.setupMyStream(stream)
+    }
     for (const p of payload) {
       const call = this.peer.call(p.uuid, this.$store.state.mic.destStream.stream)
       await this.connectCall(call)
@@ -117,7 +124,7 @@ export default class ServerDisplayer extends Vue {
     })
   }
 
-  async setupMyStream (stream: MediaStream) {
+  setupMyStream (stream: MediaStream) {
     const ctx = new AudioContext()
     const src = ctx.createMediaStreamSource(stream)
     const gainNode = ctx.createGain()
@@ -126,7 +133,7 @@ export default class ServerDisplayer extends Vue {
     src.connect(gainNode)
     gainNode.connect(dest)
 
-    gainNode.gain.value = 0
+    gainNode.gain.value = 1
 
     this.$store.state.mic.volumeNode = gainNode
     this.$store.state.mic.destStream = dest
@@ -222,8 +229,8 @@ export default class ServerDisplayer extends Vue {
 
   @Socket(ClientSocketEvents.Error)
   onError (payload: { err: string }) {
-    this.$store.state.showPopup = true
-    this.$store.state.message = payload.err
+    this.showSnackbar = true
+    this.snackbarMessage = payload.err
     this.remoteStreams.forEach(s => s.ctx.close())
     this.remoteStreams = []
     if (this.peer) this.peer.destroy()
@@ -240,7 +247,7 @@ export default class ServerDisplayer extends Vue {
         stream.gainNode.gain.value = this.lerp(this.hypotPose(this.$store.state.me.pose, client.pose))
       }
     } else if (client.group === RoomGroup.Spectator || client.group === RoomGroup.Muted) {
-      // If they are spectator
+      // If they are spectator or muted
       stream.gainNode.gain.value = 0
     }
   }

@@ -144,7 +144,6 @@ export default class ServerConnector extends Vue {
   };
 
   joinRoom (gameCode: string) {
-    console.log(gameCode)
     const backendModel: BackendModel = {
       gameCode: gameCode.toUpperCase(),
       backendType: this.backendType

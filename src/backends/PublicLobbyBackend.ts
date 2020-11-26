@@ -192,13 +192,17 @@ export default class PublicLobbyBackend extends BackendAdapter {
 
             const handleRPC = (rpcPart: RPCMessage) => {
                 if (rpcPart.rpcid === RPCID.StartMeeting) {
-                    this.emitAllPlayerPoses({ x: 0, y: 0 });
+                    setTimeout(() => {
+                        this.emitAllPlayerPoses({ x: 0, y: 0 });
+                    }, 2500);
                     console.log("meeting started");
                 } else if (rpcPart.rpcid === RPCID.VotingComplete) {
                     if (rpcPart.exiled !== 0xff) {
-                        const player = this.playerData.find(p => p.playerId === rpcPart.exiled);
-                        if (player) this.emitPlayerJoinGroup(player.name, RoomGroup.Spectator);
-                        console.log("voted off: " + player.name);
+                        setTimeout(() => {
+                            const player = this.playerData.find(p => p.playerId === rpcPart.exiled);
+                            if (player) this.emitPlayerJoinGroup(player.name, RoomGroup.Spectator);
+                            console.log("voted off: " + player.name);
+                        }, 2500);
                     }
                 } else if (rpcPart.rpcid === RPCID.MurderPlayer) {
                     const player = this.playerData.find(p => p.controlNetId === rpcPart.targetnetid);
@@ -218,6 +222,15 @@ export default class PublicLobbyBackend extends BackendAdapter {
                         });
                     }
                     console.log("set someone name to: " + rpcPart.name);
+                } else if (rpcPart.rpcid === RPCID.SnapTo) {
+                    const player = this.playerData.find(p => p.transformNetId === rpcPart.handlerid);
+                    if (player) {
+                        const pose = {
+                            x: LerpValue(rpcPart.x / 65535, -40, 40),
+                            y: LerpValue(rpcPart.y/ 65535, -40, 40)
+                        };
+                        this.emitPlayerPose(player.name, pose);
+                    }
                 } else if (rpcPart.rpcid === RPCID.RepairSystem) {
                     if (rpcPart.systemtype === SystemType.Sabotage && rpcPart.amount === SystemType.Communications) {
                         this.emitPlayerFromJoinGroup(RoomGroup.Main, RoomGroup.Muted);

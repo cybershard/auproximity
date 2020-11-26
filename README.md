@@ -44,7 +44,11 @@ However, the client manages the voice system completely. As such, the client can
 to create a desktop application, an application that interfaces with Discord RPC, and even features like minimaps!  
 
 ## Contributing
-I welcome PRs for adding additional backends, client features, and even forks for other games.
+I welcome PRs for adding additional backends, client features, and even forks for other games. 
+
+This repository follows an issue-based workflow. Issues should be created to identify
+features and bugs being worked on, and PRs should close the issues they target
+for fixes and/or implementations.
 
 ## Credits
 The [amongus-protocol](https://github.com/edqx/amongus-protocol) library by 

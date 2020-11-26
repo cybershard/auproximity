@@ -92,13 +92,17 @@ export default class PublicLobbyBackend extends BackendAdapter {
             await game.awaitSpawns();
             this.currentMap = game.options.mapID;
             this.emitMapChange(MapIdModel[MapID[game.options.mapID]]);
-            game.clients.forEach(client => this.playerData.push({
-                name: client.name,
-                clientId: client.id,
-                playerId: client.Player.PlayerControl.playerId,
-                controlNetId: client.Player.PlayerControl.netid,
-                transformNetId: client.Player.CustomNetworkTransform.netid
-            }));
+            game.clients.forEach(client => {
+                if (client.name === "") {
+                    this.playerData.push({
+                        name: client.name,
+                        clientId: client.id,
+                        playerId: client.Player.PlayerControl.playerId,
+                        controlNetId: client.Player.PlayerControl.netid,
+                        transformNetId: client.Player.CustomNetworkTransform.netid
+                    })
+                }
+            });
             await this.client.disconnect();
 
             // restart new client

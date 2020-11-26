@@ -85,8 +85,8 @@ export default class Room {
             const fromClients = this.members.filter(c => c.group === payload.from);
             this.members.forEach(c => {
                 fromClients.forEach(client => {
-                	this.clientRoomGroupMap.set(client.name, payload.to)
-                	c.setGroupOf(client.uuid, payload.to)
+                	this.clientRoomGroupMap.set(client.name, payload.to);
+                	c.setGroupOf(client.uuid, payload.to);
                 });
             });
         });

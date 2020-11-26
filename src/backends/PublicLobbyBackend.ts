@@ -28,7 +28,7 @@ import {
     RPCMessage,
     SpawnMessage
 } from "../../amongus-protocol/ts/lib/interfaces/Packets";
-import {SystemType} from '../../amongus-protocol/ts/lib/constants/Enums';
+import {SystemType} from "../../amongus-protocol/ts/lib/constants/Enums";
 
 export default class PublicLobbyBackend extends BackendAdapter {
     backendModel: PublicLobbyBackendModel

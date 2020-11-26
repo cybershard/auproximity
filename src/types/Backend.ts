@@ -63,7 +63,7 @@ export abstract class BackendAdapter extends EventEmitter {
     emitAllPlayerJoinGroups(group: RoomGroup): void {
         this.emit(BackendEvent.AllPlayerJoinGroups, { group });
     }
-    emitPlayerFromJoinGroup(from: RoomGroup, to: RoomGroup) {
+    emitPlayerFromJoinGroup(from: RoomGroup, to: RoomGroup): void {
         this.emit(BackendEvent.PlayerFromJoinGroup, { from, to });
     }
     emitError(err: string): void {

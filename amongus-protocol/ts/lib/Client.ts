@@ -123,6 +123,7 @@ export class AmongusClient extends EventEmitter {
         this.socket = null;
         this.ip = null;
         this.port = null;
+        this.game = null;
 
         this.nonce = 1;
     }
@@ -215,6 +216,7 @@ export class AmongusClient extends EventEmitter {
                                 case PayloadID.EndGame:
                                     if (payload.code === this.game.code) {
                                         this.game._finish();
+                                        this.game = null;
                                     }
                                     break;
                                 case PayloadID.RemovePlayer:

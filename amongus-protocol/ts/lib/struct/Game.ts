@@ -339,7 +339,7 @@ export class Game extends GameObject {
     }
 
     async start() {
-        // TODO: Handle finishing games as hosts.
+        // TODO: Handle starting games as hosts.
 
         this._start();
     }

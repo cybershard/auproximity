@@ -93,7 +93,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
             this.currentMap = game.options.mapID;
             this.emitMapChange(MapIdModel[MapID[game.options.mapID]]);
             game.clients.forEach(client => {
-                if (client.name === "") {
+                if (client.name !== "") {
                     this.playerData.push({
                         name: client.name,
                         clientId: client.id,

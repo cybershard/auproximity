@@ -182,10 +182,8 @@ export default class PublicLobbyBackend extends BackendAdapter {
                         }
                     }
                 } else if (part.type == MessageID.RPC) {
-                    console.log("handling rpc", part);
                     handleRPC(part as RPCMessage);
                 } else if (part.type == MessageID.Spawn) {
-                    console.log("handling spawn", part);
                     handleSpawnMessage(part as SpawnMessage);
                 }
             };
@@ -195,10 +193,14 @@ export default class PublicLobbyBackend extends BackendAdapter {
                     this.emitAllPlayerPoses({ x: 0, y: 0 });
                     console.log("meeting started");
                 } else if (rpcPart.rpcid === RPCID.VotingComplete) {
+                    console.log("meeting ended with rpc packet: ", rpcPart);
+                    console.log("current playerData: ", this.playerData);
                     if (rpcPart.exiled !== 0xff) {
                         const player = this.playerData.find(p => p.playerId === rpcPart.exiled);
-                        if (player) this.emitPlayerJoinGroup(player.name, RoomGroup.Spectator);
-                        console.log("voted off: " + player.name);
+                        if (player) {
+                            this.emitPlayerJoinGroup(player.name, RoomGroup.Spectator);
+                            console.log("voted off: " + player.name);
+                        }
                     }
                 } else if (rpcPart.rpcid === RPCID.MurderPlayer) {
                     const player = this.playerData.find(p => p.controlNetId === rpcPart.targetnetid);
@@ -218,20 +220,6 @@ export default class PublicLobbyBackend extends BackendAdapter {
                         });
                     }
                     console.log("set someone name to: " + rpcPart.name);
-                } else if (rpcPart.rpcid === RPCID.RepairSystem) {
-                    if (rpcPart.systemtype === SystemType.Sabotage && rpcPart.amount === SystemType.Communications) {
-                        this.emitPlayerFromJoinGroup(RoomGroup.Main, RoomGroup.Muted);
-                    } else if (rpcPart.systemtype === SystemType.Communications) {
-                        if (this.currentMap === MapID.TheSkeld || this.currentMap === MapID.Polus) {
-                            if ((rpcPart.amount & 0x80) == 0) {
-                                this.emitPlayerFromJoinGroup(RoomGroup.Muted, RoomGroup.Main);
-                            }
-                        } else if (this.currentMap === MapID.MiraHQ) {
-                            if ((rpcPart.amount & 0x10) != 0) {
-                                this.emitPlayerFromJoinGroup(RoomGroup.Muted, RoomGroup.Main);
-                            }
-                        }
-                    }
                 }
             };
 

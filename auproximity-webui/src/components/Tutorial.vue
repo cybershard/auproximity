@@ -26,7 +26,7 @@ export default class Tutorial extends Vue {
     'Enter your name and game code exactly as it appears in Among Us',
     'Choose the backend. This will be "Official Among Us Servers"',
     'Enter the region that you are playing in.',
-    'Choose the proper map that you are in: Skeld, Mira HQ, Polus.'
+    'Share the URL with your friends to invite them to play.'
   ]
 }
 </script>

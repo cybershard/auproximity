@@ -95,7 +95,7 @@ export default class Client implements IClientBase {
     removeClient(uuid: string): void {
         this.socket.emit(ClientSocketEvents.RemoveClient, uuid);
     }
-    setMap(map: MapIdModel) {
+    setMap(map: MapIdModel): void {
         this.socket.emit(ClientSocketEvents.SetMap, { map });
     }
     setPoseOf(uuid: string, pose: Pose): void {
@@ -110,7 +110,7 @@ export default class Client implements IClientBase {
         }
         this.socket.emit(ClientSocketEvents.SetGroup, { uuid, group });
     }
-    sendError(err: string) {
+    sendError(err: string): void {
         this.socket.emit(ClientSocketEvents.Error, { err });
     }
 }

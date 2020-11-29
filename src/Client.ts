@@ -1,6 +1,13 @@
 import {Socket} from "socket.io";
 import ClientSocketEvents from "./types/ClientSocketEvents";
-import {BackendModel, BackendType, ImpostorBackendModel, MapIdModel, PublicLobbyBackendModel, RoomGroup} from "./types/Backend";
+import {
+    BackendModel,
+    BackendType, BepInExBackendModel,
+    ImpostorBackendModel,
+    MapIdModel, NodePolusBackendModel,
+    PublicLobbyBackendModel,
+    RoomGroup
+} from "./types/Backend";
 import Room from "./Room";
 import {state} from "./main";
 import {IClientBase} from "./types/IClientBase";
@@ -31,7 +38,7 @@ export default class Client implements IClientBase {
         this.name = "";
 
         // Initialize socket events
-        this.socket.on("disconnect", async () => {
+        this.socket.on(ClientSocketEvents.Disconnect, async () => {
             await this.handleDisconnect();
         });
         this.socket.on(ClientSocketEvents.JoinRoom, async (payload: { name: string; backendModel: BackendModel }) => {
@@ -46,12 +53,17 @@ export default class Client implements IClientBase {
 
         this.name = name;
 
+        // TODO: make this just a deepEqual on backendModel
         let room = state.allRooms.find(room => {
             if (room.backendModel.gameCode !== backendModel.gameCode) return false;
             if (room.backendModel.backendType === BackendType.Impostor && backendModel.backendType === BackendType.Impostor) {
                 return (room.backendModel as ImpostorBackendModel).ip === (backendModel as ImpostorBackendModel).ip;
             } else if (room.backendModel.backendType === BackendType.PublicLobby && backendModel.backendType === BackendType.PublicLobby) {
                 return (room.backendModel as PublicLobbyBackendModel).region === (backendModel as PublicLobbyBackendModel).region;
+            } else if (room.backendModel.backendType === BackendType.NodePolus && backendModel.backendType === BackendType.NodePolus) {
+                return (room.backendModel as NodePolusBackendModel).ip === (backendModel as NodePolusBackendModel).ip;
+            } else if (room.backendModel.backendType === BackendType.BepInEx && backendModel.backendType === BackendType.BepInEx) {
+                return (room.backendModel as BepInExBackendModel).token === (backendModel as BepInExBackendModel).token;
             }
             return false;
         });
@@ -76,13 +88,8 @@ export default class Client implements IClientBase {
     }
 
     // Socket emitting functions
-    addClient(uuid: string, name: string, pose: Pose, group: RoomGroup): void {
-        this.socket.emit(ClientSocketEvents.AddClient, {
-            uuid,
-            name,
-            pose,
-            group
-        });
+    sendError(err: string): void {
+        this.socket.emit(ClientSocketEvents.Error, { err });
     }
     setAllClients(array: {
         uuid: string;
@@ -91,6 +98,14 @@ export default class Client implements IClientBase {
         group: RoomGroup
     }[]): void {
         this.socket.emit(ClientSocketEvents.SetAllClients, array);
+    }
+    addClient(uuid: string, name: string, pose: Pose, group: RoomGroup): void {
+        this.socket.emit(ClientSocketEvents.AddClient, {
+            uuid,
+            name,
+            pose,
+            group
+        });
     }
     removeClient(uuid: string): void {
         this.socket.emit(ClientSocketEvents.RemoveClient, uuid);
@@ -109,8 +124,5 @@ export default class Client implements IClientBase {
             this.group = group;
         }
         this.socket.emit(ClientSocketEvents.SetGroup, { uuid, group });
-    }
-    sendError(err: string): void {
-        this.socket.emit(ClientSocketEvents.Error, { err });
     }
 }

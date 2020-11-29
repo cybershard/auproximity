@@ -1,14 +1,14 @@
 enum ClientSocketEvents {
-    Disconnect = 'disconnect',
     SetUuid = 'setuuid',
     JoinRoom = 'joinroom',
-    AddClient = 'addclient',
+    Disconnect = 'disconnect',
+    Error = 'error',
     SetAllClients = 'setallclients',
+    AddClient = 'addclient',
     RemoveClient = 'removeclient',
     SetMap = 'setmap',
     SetPose = 'setpose',
     SetGroup = 'setgroup',
-    Error = 'error'
 }
 
 export default ClientSocketEvents

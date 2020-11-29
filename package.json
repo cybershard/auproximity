@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "description": "Proximity Voice Server",
   "author": "cybershard",
-  "contributors": ["edqx"],
+  "contributors": [
+    "edqx"
+  ],
   "license": "GPLv3",
   "scripts": {
     "serve": "nodemon ./src/main.ts",
@@ -15,6 +17,7 @@
     "@microsoft/signalr": "^5.0.0",
     "cors": "^2.8.5",
     "express": "^4.17.1",
+    "heroku-ssl-redirect": "^0.1.1",
     "lodash": "^4.17.20",
     "peer": "^0.5.3",
     "socket.io": "^3.0.1",

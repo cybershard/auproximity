@@ -27,7 +27,7 @@ import { Component, Vue } from 'vue-property-decorator'
 import { Socket } from 'vue-socket.io-extended'
 import ClientSocketEvents from '@/models/ClientSocketEvents'
 import Peer from 'peerjs'
-import { SERVER_HOSTNAME, SERVER_PORT, SERVER_SECURE } from '@/consts'
+import consts, { SERVER_HOSTNAME, SERVER_PORT, SERVER_SECURE } from '@/consts'
 import ClientModel, { Pose, RemoteStreamModel } from '@/models/ClientModel'
 import { RoomGroup } from '@/models/BackendModel'
 import { colliderMaps } from '@/models/ColliderMaps'
@@ -67,12 +67,7 @@ export default class ServerDisplayer extends Vue {
     if (this.peer) {
       this.peer.destroy()
     }
-    this.peer = new Peer(uuid, {
-      host: SERVER_HOSTNAME,
-      port: SERVER_PORT,
-      secure: SERVER_SECURE,
-      path: '/peerjs'
-    })
+    this.peer = new Peer(uuid, consts.PEER_CONFIG)
     this.peer.on('open', id => console.log('My peer ID is: ' + id))
     this.peer.on('error', async error => {
       console.log('PeerJS Error: ' + error)

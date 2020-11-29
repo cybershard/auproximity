@@ -26,9 +26,9 @@ Follow the steps below to run a server and webui with hot-reload
 - Run `yarn install` to install all dependencies
 - Run `yarn serve` in the `auproximity` directory
 - Run `yarn serve` in the `auproximity-webui` directory
-- By default, the server will listen on port `8079` and the webui will listen on port `8080`
-  - If you want to change this, edit the `consts.ts` file in both the 
-  `auproximity` directory and the `auproximity-webui` directory
+- In development, the server will listen on port `8079` and the webui will listen on port `8080`
+- In production, the webui should be served from the same origin as the server. The server 
+  should also have an ssl reverse proxy in front of it, like nginx, or on a PaaS like Heroku.
 
 > Note: The `heroku-postbuild` script is for Heroku deployment only.
 > Do NOT use it for development or production testing, as it WILL break.

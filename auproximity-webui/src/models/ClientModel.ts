@@ -14,7 +14,6 @@ export interface Pose {
 
 export interface RemoteStreamModel {
   uuid: string;
-  ctx: AudioContext;
   source: MediaStreamAudioSourceNode;
   gainNode: GainNode;
   volumeNode: GainNode;

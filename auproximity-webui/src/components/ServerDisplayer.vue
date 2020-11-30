@@ -27,7 +27,7 @@ import { Component, Vue } from 'vue-property-decorator'
 import { Socket } from 'vue-socket.io-extended'
 import ClientSocketEvents from '@/models/ClientSocketEvents'
 import Peer from 'peerjs'
-import consts, { SERVER_HOSTNAME, SERVER_PORT, SERVER_SECURE } from '@/consts'
+import consts from '@/consts'
 import ClientModel, { Pose, RemoteStreamModel } from '@/models/ClientModel'
 import { RoomGroup } from '@/models/BackendModel'
 import { colliderMaps } from '@/models/ColliderMaps'
@@ -170,7 +170,7 @@ export default class ServerDisplayer extends Vue {
   async onDisconnect () {
     await this.closeRemoteAudioConnection()
     await this.peer?.destroy()
-    this.peer = undefined;
+    this.peer = undefined
   }
 
   @Socket(ClientSocketEvents.Error)

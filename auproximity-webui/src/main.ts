@@ -6,7 +6,7 @@ import vuetify from './plugins/vuetify'
 import VueSocketIOExt from 'vue-socket.io-extended'
 import { io } from 'socket.io-client'
 import '@fortawesome/fontawesome-free/css/all.min.css'
-import consts from "@/consts";
+import consts from '@/consts'
 
 Vue.config.devtools = true
 Vue.config.productionTip = false

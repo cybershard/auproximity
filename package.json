@@ -10,6 +10,7 @@
   "scripts": {
     "serve": "nodemon ./src/main.ts",
     "build": "cross-env NODE_ENV=production tsc -p ./",
+    "start": "node ./dist/src/main.js",
     "lint": "eslint ./src/**/*.ts --fix",
     "heroku-postbuild": "yarn build && YARN_PRODUCTION=false yarn --cwd auproximity-webui install && yarn --cwd auproximity-webui build && mkdir dist/src/dist && cp -r auproximity-webui/dist dist/src"
   },

@@ -241,7 +241,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
             console.log(`Initialized PublicLobby Backend for game: ${this.backendModel.gameCode}`);
         } catch (err) {
             console.warn("Error in PublicLobbyBackend, disposing room: " + err);
-            this.emit(BackendEvent.Error);
+            this.emitError(err);
         }
     }
 
@@ -261,7 +261,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
         }
         let game;
         try {
-            game = client.join(this.backendModel.gameCode, {
+            game = await client.join(this.backendModel.gameCode, {
                 doSpawn: true
             });
         } catch (e) {

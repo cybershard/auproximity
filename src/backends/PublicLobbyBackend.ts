@@ -249,11 +249,11 @@ export default class PublicLobbyBackend extends BackendAdapter {
         this.playerData = [];
         this.shipStatusNetId = -1;
 
-        this.client = new AmongusClient({
+        const client = new AmongusClient({
             debug: DebugOptions.None
         });
         try {
-            await this.client.connect(server[0], server[1], "auprox");
+            await client.connect(server[0], server[1], "auprox");
         } catch (e) {
             console.error("An error occurred", e);
             this.emitError("Couldn't connect to the Among Us servers, the server may be full, try again later!");
@@ -261,7 +261,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
         }
         let game;
         try {
-            game = await this.client.join(this.backendModel.gameCode, {
+            game = await client.join(this.backendModel.gameCode, {
                 doSpawn: true
             });
         } catch (e) {
@@ -283,7 +283,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 });
             }
         });
-        await this.client.disconnect();
+        await client.disconnect();
     }
 
     async destroy(): Promise<void> {

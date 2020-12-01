@@ -66,7 +66,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 servers = MasterServers.AS[0];
             }
 
-            await this.firstSpawn(servers);
+            await this.initialSpawn(servers);
 
             // restart new client
             this.client = new AmongusClient({
@@ -86,7 +86,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 } else if (payload.payloadid === PayloadID.EndGame) {
                     this.emitAllPlayerJoinGroups(RoomGroup.Spectator);
                     this.client.game = null;
-                    await this.firstSpawn(servers);
+                    await this.initialSpawn(servers);
                     await this.client.join(this.backendModel.gameCode, {
                         doSpawn: false
                     });
@@ -241,11 +241,11 @@ export default class PublicLobbyBackend extends BackendAdapter {
             console.log(`Initialized PublicLobby Backend for game: ${this.backendModel.gameCode}`);
         } catch (err) {
             console.warn("Error in PublicLobbyBackend, disposing room: " + err);
-            this.emit(BackendEvent.Error);
+            this.emitError(err);
         }
     }
 
-    async firstSpawn(servers: [string, number]): Promise<void> {
+    async initialSpawn(server: [string, number]): Promise<void> {
         this.playerData = [];
         this.shipStatusNetId = -1;
 
@@ -253,7 +253,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
             debug: DebugOptions.None
         });
         try {
-            await client.connect(servers[0], servers[1], "auprox");
+            await client.connect(server[0], server[1], "auprox");
         } catch (e) {
             console.error("An error occurred", e);
             this.emitError("Couldn't connect to the Among Us servers, the server may be full, try again later!");
@@ -261,7 +261,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
         }
         let game;
         try {
-            game = client.join(this.backendModel.gameCode, {
+            game = await client.join(this.backendModel.gameCode, {
                 doSpawn: true
             });
         } catch (e) {
@@ -283,7 +283,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 });
             }
         });
-        await this.client.disconnect();
+        await client.disconnect();
     }
 
     async destroy(): Promise<void> {

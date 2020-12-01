@@ -5,14 +5,13 @@ import store from './store'
 import vuetify from './plugins/vuetify'
 import VueSocketIOExt from 'vue-socket.io-extended'
 import { io } from 'socket.io-client'
-import { SOCKETIO_URL } from '@/consts'
 import '@fortawesome/fontawesome-free/css/all.min.css'
+import consts from '@/consts'
 
 Vue.config.devtools = true
 Vue.config.productionTip = false
-// eslint-disable-next-line
-// @ts-ignore
-Vue.use(VueSocketIOExt, io(SOCKETIO_URL), { store })
+
+Vue.use(VueSocketIOExt, io(consts.SERVER_URL), { store })
 
 new Vue({
   router,

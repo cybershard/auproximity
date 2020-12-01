@@ -4,15 +4,17 @@ import socketio, {Socket} from "socket.io";
 import {v4} from "uuid";
 import Client from "./Client";
 import Room from "./Room";
-import {SERVER_PORT, DEV_WEBUI_HOSTNAME, DEV_WEBUI_PORT} from "./consts";
 import {ExpressPeerServer} from "peer";
 import path from "path";
+import sslRedirect from "heroku-ssl-redirect";
 
 const app = express();
+app.use(sslRedirect());
 app.use(express.static(path.join(__dirname, "dist")));
+
 const server = http.createServer(app);
 const io = new socketio.Server(server, process.env.NODE_ENV === "production" ? {} : {
-    cors: { origin: `http://${DEV_WEBUI_HOSTNAME}:${DEV_WEBUI_PORT}` }
+    cors: { origin: "http://localhost:8080" }
 });
 app.use("/peerjs", ExpressPeerServer({
     // eslint-disable-next-line
@@ -25,6 +27,7 @@ app.use("/peerjs", ExpressPeerServer({
         });
     }
 }));
+
 
 export const state: {
     allClients: Client[];
@@ -43,6 +46,9 @@ io.on("connection", (socket: Socket) => {
 app.all("*", (req, res) => {
     res.sendFile(path.join(__dirname, "dist", "index.html"));
 });
-server.listen(process.env.PORT || SERVER_PORT, () => {
-    console.log(`Listening on port ${SERVER_PORT}`);
+
+
+const port = process.env.PORT || 8079;
+server.listen(port, () => {
+    console.log(`Listening on port ${port}`);
 });

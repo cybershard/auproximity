@@ -1,10 +1,25 @@
-const PRODUCTION_HOSTNAME = 'auproxy.herokuapp.com'
-const DEVELOPMENT_HOSTNAME = 'localhost'
-const PRODUCTION_PORT = 443
-const DEVELOPMENT_PORT = 8079 // this is the port of the backend server on the dev environment
+const consts: {
+  SERVER_URL: string;
+  PEER_CONFIG: {
+    host: string;
+    secure: boolean;
+    path: '/peerjs';
+    port?: number;
+  };
+} = {
+  SERVER_URL: window.location.origin,
+  PEER_CONFIG: {
+    host: window.location.hostname,
+    secure: true,
+    path: '/peerjs'
+  }
+}
 
-export const SERVER_HOSTNAME = process.env.NODE_ENV === 'production' ? PRODUCTION_HOSTNAME : DEVELOPMENT_HOSTNAME
-export const SERVER_PORT = process.env.NODE_ENV === 'production' ? PRODUCTION_PORT : DEVELOPMENT_PORT
-export const SERVER_SECURE = process.env.NODE_ENV === 'production'
+if (window.location.hostname === 'localhost') {
+  // Assume we are in dev environment
+  consts.SERVER_URL = 'http://localhost:8079'
+  consts.PEER_CONFIG.secure = false
+  consts.PEER_CONFIG.port = 8079
+}
 
-export const SOCKETIO_URL = `${process.env.NODE_ENV === 'production' ? 'https' : 'http'}://${SERVER_HOSTNAME}:${SERVER_PORT}`
+export default consts

@@ -6,7 +6,7 @@
   "contributors": [
     "edqx"
   ],
-  "license": "GPLv3",
+  "license": "GPL-3.0-only",
   "scripts": {
     "serve": "nodemon ./src/main.ts",
     "build": "cross-env NODE_ENV=production tsc -p ./",

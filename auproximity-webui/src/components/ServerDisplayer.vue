@@ -91,12 +91,11 @@ export default class ServerDisplayer extends Vue {
     })
     this.peer.on('call', async (call) => {
       if (this.$store.state.clients.find((c: ClientModel) => c.uuid === call.peer)) {
-        await this.connectCall(call)
-
         // If the user has not given permission for audio, this will be undefined, and we won't answer the call.
         if (this.$store.state.mic.destStream) {
           call.answer(this.$store.state.mic.destStream.stream)
         }
+        await this.connectCall(call)
       }
     })
   }
@@ -128,6 +127,7 @@ export default class ServerDisplayer extends Vue {
   connectCall (call: Peer.MediaConnection) {
     return new Promise(resolve => {
       call.on('stream', remoteStream => {
+        console.log('recieved remotestream: ', remoteStream)
         if (!this.remotectx) {
           this.remotectx = new AudioContext()
         }

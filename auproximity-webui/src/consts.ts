@@ -5,13 +5,15 @@ const consts: {
     secure: boolean;
     path: '/peerjs';
     port?: number;
+    debug: 0 | 1 | 2 | 3;
   };
 } = {
   SERVER_URL: window.location.origin,
   PEER_CONFIG: {
     host: window.location.hostname,
     secure: true,
-    path: '/peerjs'
+    path: '/peerjs',
+    debug: 3
   }
 }
 

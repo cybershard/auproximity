@@ -4,8 +4,10 @@ EXPOSE 8079
 
 WORKDIR /usr/src/app
 
-COPY . .
+COPY package.json .
 RUN yarn install
+
+COPY . .
 RUN yarn build
 
 CMD ["yarn", "start"]

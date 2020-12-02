@@ -13,7 +13,7 @@ const consts: {
     host: window.location.hostname,
     secure: true,
     path: '/peerjs',
-    debug: 3
+    debug: 1
   }
 }
 

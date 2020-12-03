@@ -7,6 +7,8 @@ const consts: {
     port?: number;
     debug: 0 | 1 | 2 | 3;
   };
+  DISCORD_INVITE_URL: string;
+  GITHUB_URL: string;
 } = {
   SERVER_URL: window.location.origin,
   PEER_CONFIG: {
@@ -14,7 +16,9 @@ const consts: {
     secure: true,
     path: '/peerjs',
     debug: 1
-  }
+  },
+  DISCORD_INVITE_URL: 'https://discord.gg/gvQzM4GYbv',
+  GITHUB_URL: 'https://github.com/cybershard/auproximity'
 }
 
 if (window.location.hostname === 'localhost') {

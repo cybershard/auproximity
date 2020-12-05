@@ -86,7 +86,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 } else if (payload.payloadid === PayloadID.EndGame) {
                     this.emitAllPlayerJoinGroups(RoomGroup.Spectator);
                     this.client.game = null;
-                    await this.initialSpawn(servers);
+                    this.playerData = [];
                     await this.client.join(this.backendModel.gameCode, {
                         doSpawn: false
                     });

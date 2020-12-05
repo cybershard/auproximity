@@ -29,11 +29,11 @@
       class="px-3"
     >
       <template v-slot:prepend>
-        <v-icon @click="decrementvol">fa-volume-mute</v-icon>
+        <v-icon>fa-volume-mute</v-icon>
       </template>
 
       <template v-slot:append>
-        <v-icon @click="incrementvol">fa-volume-up</v-icon>
+        <v-icon>fa-volume-up</v-icon>
       </template>
     </v-slider>
   </v-list-group>
@@ -53,14 +53,6 @@ export default class ClientListItem extends Vue {
 
   get stream () {
     return this.streams.find(s => s.uuid === this.client.uuid)
-  }
-
-  decrementvol () {
-    if (this.streamVolume) this.streamVolume = Math.max(0, this.streamVolume - 5)
-  }
-
-  incrementvol () {
-    if (this.streamVolume) this.streamVolume = Math.min(100, this.streamVolume + 5)
   }
 
   get streamVolume () {

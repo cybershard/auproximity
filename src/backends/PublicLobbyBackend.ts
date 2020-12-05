@@ -57,11 +57,6 @@ export default class PublicLobbyBackend extends BackendAdapter {
             // on player murdered and exiled => event
             // on game finish => event
             // rejoin game
-
-            this.client = new AmongusClient({
-                debug: DebugOptions.None
-            });
-
             let servers;
             if (this.backendModel.region === PublicLobbyRegion.NorthAmerica) {
                 servers = MasterServers.NA[0];
@@ -71,38 +66,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 servers = MasterServers.AS[0];
             }
 
-            try {
-                await this.client.connect(servers[0], servers[1], "auprox");
-            } catch (e) {
-                console.error("An error occurred", e);
-                this.emitError("Couldn't connect to the Among Us servers, the server may be full, try again later!");
-                return;
-            }
-            let game;
-            try {
-                game = await this.client.join(this.backendModel.gameCode, {
-                    doSpawn: true
-                });
-            } catch (e) {
-                console.error("Couldn't join game", e);
-                this.emitError("Couldn't join the game, make sure that the game hasn't started and there is a spot for the client!");
-                return;
-            }
-            await game.awaitSpawns();
-            this.currentMap = game.options.mapID;
-            this.emitMapChange(MapIdModel[MapID[game.options.mapID]]);
-            game.clients.forEach(client => {
-                if (client.name !== "") {
-                    this.playerData.push({
-                        name: client.name,
-                        clientId: client.id,
-                        playerId: client.Player.PlayerControl.playerId,
-                        controlNetId: client.Player.PlayerControl.netid,
-                        transformNetId: client.Player.CustomNetworkTransform.netid
-                    });
-                }
-            });
-            await this.client.disconnect();
+            await this.initialSpawn(servers);
 
             // restart new client
             this.client = new AmongusClient({
@@ -122,6 +86,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 } else if (payload.payloadid === PayloadID.EndGame) {
                     this.emitAllPlayerJoinGroups(RoomGroup.Spectator);
                     this.client.game = null;
+                    this.playerData = [];
                     await this.client.join(this.backendModel.gameCode, {
                         doSpawn: false
                     });
@@ -276,9 +241,51 @@ export default class PublicLobbyBackend extends BackendAdapter {
             console.log(`Initialized PublicLobby Backend for game: ${this.backendModel.gameCode}`);
         } catch (err) {
             console.warn("Error in PublicLobbyBackend, disposing room: " + err);
-            this.emit(BackendEvent.Error);
+            this.emitError(err);
         }
     }
+
+    async initialSpawn(server: [string, number]): Promise<void> {
+        this.playerData = [];
+        this.shipStatusNetId = -1;
+
+        const client = new AmongusClient({
+            debug: DebugOptions.None
+        });
+        try {
+            await client.connect(server[0], server[1], "auprox");
+        } catch (e) {
+            console.error("An error occurred", e);
+            this.emitError("Couldn't connect to the Among Us servers, the server may be full, try again later!");
+            return;
+        }
+        let game;
+        try {
+            game = await client.join(this.backendModel.gameCode, {
+                doSpawn: true
+            });
+        } catch (e) {
+            console.error("Couldn't join game", e);
+            this.emitError("Couldn't join the game, make sure that the game hasn't started and there is a spot for the client!");
+            return;
+        }
+        await game.awaitSpawns();
+        this.currentMap = game.options.mapID;
+        this.emitMapChange(MapIdModel[MapID[game.options.mapID]]);
+        game.clients.forEach(client => {
+            if (client.name !== "") {
+                this.playerData.push({
+                    name: client.name,
+                    clientId: client.id,
+                    playerId: client.Player.PlayerControl.playerId,
+                    controlNetId: client.Player.PlayerControl.netid,
+                    transformNetId: client.Player.CustomNetworkTransform.netid
+                });
+            }
+        });
+        await client.disconnect();
+    }
+
     async destroy(): Promise<void> {
         if (this.client && this.client.socket) {
             await this.client.disconnect();

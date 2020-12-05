@@ -29,11 +29,11 @@
       class="px-3"
     >
       <template v-slot:prepend>
-        <v-icon @click="decrementvol">fa-microphone-slash</v-icon>
+        <v-icon>fa-microphone-slash</v-icon>
       </template>
 
       <template v-slot:append>
-        <v-icon @click="incrementvol">fa-microphone</v-icon>
+        <v-icon>fa-microphone</v-icon>
       </template>
     </v-slider>
   </v-list-group>
@@ -50,14 +50,6 @@ export default class MyClientListItem extends Vue {
 
   @Prop()
   mic!: MyMicModel;
-
-  decrementvol () {
-    if (this.streamVolume) this.streamVolume = Math.max(0, this.streamVolume - 5)
-  }
-
-  incrementvol () {
-    if (this.streamVolume) this.streamVolume = Math.min(100, this.streamVolume + 5)
-  }
 
   get streamVolume () {
     if (typeof this.mic.volumeNode !== 'undefined') {

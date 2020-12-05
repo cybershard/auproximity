@@ -1,13 +1,17 @@
 {
   "name": "auproximity-server",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Proximity Voice Server",
   "author": "cybershard",
-  "contributors": ["edqx"],
-  "license": "GPLv3",
+  "contributors": [
+    "edqx"
+  ],
+  "license": "GPL-3.0-only",
   "scripts": {
     "serve": "nodemon ./src/main.ts",
     "build": "cross-env NODE_ENV=production tsc -p ./",
+    "build:docker": "docker build -t auproxy-backend .",
+    "start": "node ./dist/src/main.js",
     "lint": "eslint ./src/**/*.ts --fix",
     "heroku-postbuild": "yarn build && YARN_PRODUCTION=false yarn --cwd auproximity-webui install && yarn --cwd auproximity-webui build && mkdir dist/src/dist && cp -r auproximity-webui/dist dist/src"
   },
@@ -15,6 +19,7 @@
     "@microsoft/signalr": "^5.0.0",
     "cors": "^2.8.5",
     "express": "^4.17.1",
+    "heroku-ssl-redirect": "^0.1.1",
     "lodash": "^4.17.20",
     "peer": "^0.5.3",
     "socket.io": "^3.0.1",
@@ -34,9 +39,6 @@
     "eslint": "^7.13.0",
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-promise": "^4.2.1",
-    "gulp": "^4.0.2",
-    "gulp-cli": "^2.3.0",
-    "gulp-run": "^1.7.1",
     "loadash": "^1.0.0",
     "nodemon": "^2.0.6",
     "ts-node": "^9.0.0",

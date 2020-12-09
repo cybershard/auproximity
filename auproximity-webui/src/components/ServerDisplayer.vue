@@ -187,12 +187,11 @@ export default class ServerDisplayer extends Vue {
     }
     await this.setupMyStream()
     await this.closeRemoteAudioConnection()
-    if (typeof this.peer !== 'undefined') {
-      for (const p of payload) {
-        const call = this.peer.call(p.uuid, this.$store.state.mic.destStream.stream)
-        await this.connectCall(call)
-      }
-    }
+    await Promise.all(payload.map(p => {
+      // eslint-disable-next-line
+      const call = this.peer!.call(p.uuid, this.$store.state.mic.destStream.stream)
+      return this.connectCall(call)
+    }))
   }
 
   @Socket(ClientSocketEvents.RemoveClient)

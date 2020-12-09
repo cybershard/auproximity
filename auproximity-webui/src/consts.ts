@@ -1,12 +1,8 @@
+import { PeerJSOption } from 'peerjs'
+
 const consts: {
   SERVER_URL: string;
-  PEER_CONFIG: {
-    host: string;
-    secure: boolean;
-    path: '/peerjs';
-    port?: number;
-    debug: 0 | 1 | 2 | 3;
-  };
+  PEER_CONFIG: PeerJSOption;
   DISCORD_INVITE_URL: string;
   GITHUB_URL: string;
 } = {
@@ -14,8 +10,21 @@ const consts: {
   PEER_CONFIG: {
     host: window.location.hostname,
     secure: true,
+    port: 433,
     path: '/peerjs',
-    debug: 1
+    debug: 1,
+    config: {
+      iceServers: [
+        {
+          urls: 'stun:stun.l.google.com:19302'
+        },
+        {
+          urls: 'turn:68.183.101.44:3478',
+          username: 'auproximity',
+          credential: 'nearby'
+        }
+      ]
+    }
   },
   DISCORD_INVITE_URL: 'https://discord.gg/gvQzM4GYbv',
   GITHUB_URL: 'https://github.com/cybershard/auproximity'

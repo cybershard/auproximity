@@ -44,7 +44,7 @@ There are two images: the stable release image, and the development image.
 
 #### Setup instructions
  - Download the image as explained in the previous section.
- - Start up a container with `docker run -d auproxy:{tag} -p {port}:8079`,
+ - Start up a container with `docker run -d -p {port}:8079 cybershard/auproxy:{tag} `,
    replacing `tag` with `latest` or `dev` respectively, and `port` with whatever port you would like.
  - Choose your favorite SSL reverse proxy to put in front of the container, like NGINX or Traefik.
    Make sure to forward https traffic to the `port` that you chose in the previous step.

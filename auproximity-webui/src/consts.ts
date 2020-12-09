@@ -10,7 +10,6 @@ const consts: {
   PEER_CONFIG: {
     host: window.location.hostname,
     secure: true,
-    port: 433,
     path: '/peerjs',
     debug: 1,
     config: {

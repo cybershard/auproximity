@@ -134,14 +134,19 @@ export default class ServerDisplayer extends Vue {
         const source = this.remotectx.createMediaStreamSource(new MediaStream([remoteStream.getAudioTracks()[0]]))
         const gainNode = this.remotectx.createGain()
         const volumeNode = this.remotectx.createGain()
+        const pannerNode = this.remotectx.createPanner()
 
         source.connect(gainNode)
         gainNode.connect(volumeNode)
-        volumeNode.connect(this.remotectx.destination)
+        volumeNode.connect(pannerNode)
+        pannerNode.connect(this.remotectx.destination)
 
         gainNode.gain.value = 1
         volumeNode.gain.value = 1
-        this.remoteStreams.push({ uuid: call.peer, source, gainNode, volumeNode, remoteStream })
+        pannerNode.maxDistance = 1
+        pannerNode.rolloffFactor = 0 // Prevents the pannerNode from adjusting the volume (this is being done manually in the gainNode)
+
+        this.remoteStreams.push({ uuid: call.peer, source, gainNode, volumeNode, pannerNode, remoteStream })
         resolve()
       })
     })
@@ -155,6 +160,7 @@ export default class ServerDisplayer extends Vue {
       s.source.disconnect()
       s.gainNode.disconnect()
       s.volumeNode.disconnect()
+      s.pannerNode.disconnect()
     })
     await this.remotectx?.close()
     this.remoteStreams = []
@@ -201,6 +207,7 @@ export default class ServerDisplayer extends Vue {
         remote.source.disconnect()
         remote.gainNode.disconnect()
         remote.volumeNode.disconnect()
+        remote.pannerNode.disconnect()
         return false
       }
       return true
@@ -220,6 +227,7 @@ export default class ServerDisplayer extends Vue {
       if (payload.uuid === this.$store.state.me.uuid) {
         this.remoteStreams.forEach(s => {
           s.gainNode.gain.value = 1
+          s.pannerNode.setPosition(0, 0, 0)
         })
       } else if (this.$store.state.me.group === RoomGroup.Main) {
         const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
@@ -229,6 +237,7 @@ export default class ServerDisplayer extends Vue {
         const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
         if (!stream) return
         stream.gainNode.gain.value = 1
+        stream.pannerNode.setPosition(0, 0, 0)
       } else if (this.$store.state.me.group === RoomGroup.Muted) {
         const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
         if (!stream) return
@@ -263,6 +272,7 @@ export default class ServerDisplayer extends Vue {
           const client: ClientModel = this.$store.state.clients.find((c: ClientModel) => c.uuid === s.uuid)
           if (client && client.group === RoomGroup.Main) {
             s.gainNode.gain.value = 1
+            s.pannerNode.setPosition(0, 0, 0)
           }
         })
       } else {
@@ -280,15 +290,19 @@ export default class ServerDisplayer extends Vue {
     }
   }
 
-  recalcVolumeForRemoteStream (stream: { uuid: string; gainNode: GainNode }) {
+  recalcVolumeForRemoteStream (stream: { uuid: string; gainNode: GainNode; pannerNode: PannerNode }) {
     const client: ClientModel = this.$store.state.clients.find((c: ClientModel) => c.uuid === stream.uuid)
     if (!client) return
     // Only change if they are in RoomGroup.Main
     if (client.group === RoomGroup.Main) {
-      if (this.poseCollide(this.$store.state.me.pose, client.pose)) {
+      const p1 = this.$store.state.me.pose
+      const p2 = client.pose
+
+      if (this.poseCollide(p1, p2)) {
         stream.gainNode.gain.value = 0
       } else {
-        stream.gainNode.gain.value = this.lerp(this.hypotPose(this.$store.state.me.pose, client.pose))
+        stream.gainNode.gain.value = this.lerp(this.hypotPose(p1, p2))
+        stream.pannerNode.setPosition(p2.x - p1.x, p2.y - p1.y, 1)
       }
     } else if (client.group === RoomGroup.Spectator || client.group === RoomGroup.Muted) {
       // If they are spectator or muted

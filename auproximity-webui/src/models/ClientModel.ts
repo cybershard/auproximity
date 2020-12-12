@@ -17,6 +17,7 @@ export interface RemoteStreamModel {
   source: MediaStreamAudioSourceNode;
   gainNode: GainNode;
   volumeNode: GainNode;
+  pannerNode: PannerNode;
   remoteStream: MediaStream;
 }
 

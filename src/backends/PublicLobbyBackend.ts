@@ -126,27 +126,28 @@ export default class PublicLobbyBackend extends BackendAdapter {
                         const systemsMask = reader.packed();
                         // if the systemsMask contains communication
                         if ((systemsMask & (1 << 14)) != 0) {
-                           if (this.currentMap === MapID.TheSkeld ||
-                               this.currentMap === MapID.Polus) {
-                               // if it is sabotaged
-                               if (reader.bool()) {
-                                   this.emitPlayerFromJoinGroup(RoomGroup.Main, RoomGroup.Muted);
-                               } else {
-                                   this.emitPlayerFromJoinGroup(RoomGroup.Muted, RoomGroup.Main);
-                               }
-                           } else if (this.currentMap === MapID.MiraHQ) {
-                                for (let i; i < reader.packed(); i++) {
+                            if (this.currentMap === MapID.TheSkeld ||
+                                this.currentMap === MapID.Polus) {
+                                // if it is sabotaged
+                                if (reader.bool()) {
+                                    this.emitPlayerFromJoinGroup(RoomGroup.Main, RoomGroup.Muted);
+                                } else {
+                                    this.emitPlayerFromJoinGroup(RoomGroup.Muted, RoomGroup.Main);
+                                }
+                            } else if (this.currentMap === MapID.MiraHQ) {
+                                let consoleCount = reader.packed();
+                                for (let i = 0; i < consoleCount; i++) {
                                     reader.byte();
                                     reader.byte();
                                 }
-                                const consoleCount = reader.packed();
+                                consoleCount = reader.packed();
                                 if (consoleCount === 0) {
                                     this.emitPlayerFromJoinGroup(RoomGroup.Main, RoomGroup.Muted);
                                 }
-                                if (reader.packed() == 2 && reader.bool() == true && reader.bool() == true) {
+                                if (consoleCount === 2 && reader.bool() === true && reader.bool() === true) {
                                     this.emitPlayerFromJoinGroup(RoomGroup.Muted, RoomGroup.Main);
                                 }
-                           }
+                            }
                         }
                     }
                 } else if (part.type == MessageID.RPC) {

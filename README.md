@@ -12,10 +12,13 @@ send a direct message to `Cybershard#3935` on Discord. This software comes with 
 
 ## Features
 - The software can connect to a public game to host proximity voice services
+  - A restriction with public lobbies is that it is **limited to 9 players** only.
 - Run as a plugin on Impostor, NodePolus or other private servers.
+  - A private server plugin will have none of the limitations of the public lobby
+    (e.g. It **won't** be limited to 9 players) 
 - There is also planned support for a [BepInEx](https://github.com/BepInEx/BepInEx) mod,
 which will serve the purpose of sending positional data to the backend server.
-  - Currently, the Impostor plugin and BepInEx mod are separate projects and are closed source.
+  - Currently, the Impostor plugin and BepInEx mod are separate projects.
   - The Impostor plugin requires a custom fork as well, as exposing movement
     data in the public API has not been upstreamed.
 
@@ -32,6 +35,21 @@ Follow the steps below to run a server and webui with hot-reload
 
 > Note: The `heroku-postbuild` script is for Heroku deployment only.
 > Do NOT use it for development or production testing, as it WILL break.
+
+## Selfhosting - Docker images
+I provide docker images to quickly setup a instance on a server or local development machine.
+There are two images: the stable release image, and the development image.
+ - The command `docker pull cybershard/auproxy:latest` will pull the stable image.
+ - The command `docker pull cybershard/auproxy:dev` will pull the development image.
+
+#### Setup instructions
+ - Download the image as explained in the previous section.
+ - Start up a container with `docker run -d -p {port}:8079 cybershard/auproxy:{tag} `,
+   replacing `tag` with `latest` or `dev` respectively, and `port` with whatever port you would like.
+ - Choose your favorite SSL reverse proxy to put in front of the container, like NGINX or Traefik.
+   Make sure to forward https traffic to the `port` that you chose in the previous step.
+ - Connect to the server with your web browser to test, and if it succeeds, congratulations!
+   You now have a fully functioning AUProximity instance self hosted.
 
 ## Architecture
 This repository contains two different modules, the server and the webui.

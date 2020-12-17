@@ -5,7 +5,7 @@
       <h4 v-if="$store.state.joinedRoom">Current Map: {{ this.colliderMap }}</h4>
     </div>
     <v-list v-if="$store.state.joinedRoom">
-      <MyClientListItem :client="me" :mic="mymic"/>
+      <MyClientListItem :client="me" :mic="mymic" />
       <ClientListItem v-for="client in clients" :key="client.uuid" :client="client" :streams="remoteStreams" />
     </v-list>
     <div>
@@ -34,9 +34,11 @@ import { colliderMaps } from '@/models/ColliderMaps'
 import intersect from 'path-intersection'
 import ClientListItem from '@/components/ClientListItem.vue'
 import MyClientListItem from '@/components/MyClientListItem.vue'
+import HostOptions from '@/components/HostOptions.vue'
+import { GameSettings } from '../../../src/types/Backend'
 
 @Component({
-  components: { MyClientListItem, ClientListItem },
+  components: { MyClientListItem, ClientListItem, HostOptions },
   directives: {
     audio (el: HTMLElement, { value }) {
       const elem: HTMLAudioElement = el as HTMLAudioElement
@@ -54,11 +56,11 @@ export default class ServerDisplayer extends Vue {
 
   colliderMap: 'Skeld' | 'Mira HQ' | 'Polus' = 'Skeld';
 
-  LERP_VALUE = 2.7;
-
   peer?: Peer;
   remotectx?: AudioContext;
   remoteStreams: RemoteStreamModel[] = [];
+
+  settings: GameSettings;
 
   /**
    * Starts a PeerJS connection, handles answering calls and auto-reconnects to PeerJS and remote peer MediaStreams on error
@@ -290,6 +292,11 @@ export default class ServerDisplayer extends Vue {
     }
   }
 
+  @Socket(ClientSocketEvents.SetSettings)
+  onSetSettings (payload: { settings: GameSettings }) {
+    this.settings = payload.settings
+  }
+
   recalcVolumeForRemoteStream (stream: { uuid: string; gainNode: GainNode; pannerNode: PannerNode }) {
     const client: ClientModel = this.$store.state.clients.find((c: ClientModel) => c.uuid === stream.uuid)
     if (!client) return
@@ -298,7 +305,7 @@ export default class ServerDisplayer extends Vue {
       const p1 = this.$store.state.me.pose
       const p2 = client.pose
 
-      if (this.poseCollide(p1, p2)) {
+      if (this.poseCollide(p1, p2) && this.$store.state.options.colliders) {
         stream.gainNode.gain.value = 0
       } else {
         stream.gainNode.gain.value = this.lerp(this.hypotPose(p1, p2))
@@ -347,6 +354,10 @@ export default class ServerDisplayer extends Vue {
 
   get mymic () {
     return this.$store.state.mic
+  }
+
+  get LERP_VALUE () {
+    return this.$store.state.options.falloffVision ? this.settings.crewmateVision : this.$store.state.options.falloff
   }
 }
 </script>

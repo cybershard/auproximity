@@ -3,6 +3,8 @@ import ClientSocketEvents from "./types/ClientSocketEvents";
 import {
     BackendModel,
     BackendType, BepInExBackendModel,
+    GameSettings,
+    HostOptions,
     ImpostorBackendModel,
     MapIdModel, NodePolusBackendModel,
     PublicLobbyBackendModel,
@@ -43,6 +45,11 @@ export default class Client implements IClientBase {
         });
         this.socket.on(ClientSocketEvents.JoinRoom, async (payload: { name: string; backendModel: BackendModel }) => {
             await this.joinRoom(payload.name, payload.backendModel);
+        });
+        this.socket.on(ClientSocketEvents.SetOptions, async (payload: { options: HostOptions }) => {
+            if (this.room && this.name === this.room.hostname) {
+                this.room.setOptions(payload.options);
+            }
         });
         this.socket.emit(ClientSocketEvents.SetUuid, this.uuid);
     }
@@ -124,5 +131,14 @@ export default class Client implements IClientBase {
             this.group = group;
         }
         this.socket.emit(ClientSocketEvents.SetGroup, { uuid, group });
+    }
+    setHost(ishost: boolean) {
+        this.socket.emit(ClientSocketEvents.SetHost, { ishost });
+    }
+    sendOptions(options: HostOptions) {
+        this.socket.emit(ClientSocketEvents.SetOptions, { options });
+    }
+    sendSettings(settings: GameSettings) {
+        this.socket.emit(ClientSocketEvents.SetSettings, { settings });
     }
 }

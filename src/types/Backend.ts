@@ -49,6 +49,17 @@ export enum RoomGroup {
     Muted
 }
 
+export interface HostOptions {
+    falloff: number;
+    falloffVision: boolean;
+    colliders: boolean;
+    paSystems: boolean;
+}
+
+export interface GameSettings {
+    crewmateVision: number;
+}
+
 // Actual backend class
 export abstract class BackendAdapter extends EventEmitter {
     abstract backendModel: BackendModel;
@@ -78,7 +89,14 @@ export abstract class BackendAdapter extends EventEmitter {
     emitError(err: string): void {
         this.emit(BackendEvent.Error, { err });
     }
+    emitHostChange(hostname: string) {
+        this.emit(BackendEvent.HostChange, { hostname });
+    }
+    emitSettingsUpdate(settings: GameSettings) {
+        this.emit(BackendEvent.SettingsUpdate, { settings });
+    }
 }
+
 export enum BackendEvent {
     MapChange = "mapchange",
     PlayerPose = "playerpose",
@@ -86,6 +104,8 @@ export enum BackendEvent {
     AllPlayerPoses = "allplayerposes",
     AllPlayerJoinGroups = "allplayerjoingroup",
     PlayerFromJoinGroup = "playerfromjoingroup",
-    Error = "error"
+    Error = "error",
+    HostChange = "hostchange",
+    SettingsUpdate = "settingsupdate"
 }
 

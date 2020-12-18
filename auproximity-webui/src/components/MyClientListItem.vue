@@ -8,6 +8,9 @@
         <v-list-item-title>
           <span class="float-left">
             {{ client.name }}
+            <span v-if="$store.state.ishost">
+              (HOST)
+            </span>
           </span>
           <span class="float-right" v-if="mic.volumeNode !== undefined">
             <span class="px-3">Connected</span><i class="fas fa-volume-up"></i>
@@ -59,6 +62,7 @@ export default class MyClientListItem extends Vue {
   }
 
   set streamVolume (val) {
+    console.log(this.$store.state.ishost)
     if (typeof this.mic.volumeNode !== 'undefined') {
       this.mic.volumeNode.gain.value = val ? val / 100 : 0
     }

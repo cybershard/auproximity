@@ -9,6 +9,9 @@ enum ClientSocketEvents {
     SetMap = 'setmap',
     SetPose = 'setpose',
     SetGroup = 'setgroup',
+    SetHost = 'sethost',
+    SetOptions = 'setoptions',
+    SetSettings = 'setsettings'
 }
 
 export default ClientSocketEvents

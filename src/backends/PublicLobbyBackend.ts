@@ -10,6 +10,7 @@ import {
     AmongusClient,
     BufferReader,
     DebugOptions,
+    Game,
     LerpValue,
     MapID,
     MasterServers,
@@ -23,6 +24,7 @@ import {
     GameDataMessage,
     GameDataPayload,
     GameDataToPayload,
+    JoinGamePayloadClientBound,
     Payload,
     PlayerSpawn,
     RPCMessage,
@@ -80,7 +82,13 @@ export default class PublicLobbyBackend extends BackendAdapter {
             });
 
             const handlePayload = async (payload: Payload) => {
-                if (payload.payloadid === PayloadID.StartGame) {
+                if (payload.payloadid === PayloadID.JoinGame && payload.bound === "client" && payload.error === false) {
+                    const hostData = this.playerData.find(p => p.clientId === payload.hostid);
+
+                    if (hostData) {
+                        this.emitHostChange(hostData.name);
+                    }
+                } else if (payload.payloadid === PayloadID.StartGame) {
                     this.emitAllPlayerJoinGroups(RoomGroup.Main);
                     console.log("started game");
                 } else if (payload.payloadid === PayloadID.EndGame) {
@@ -100,6 +108,12 @@ export default class PublicLobbyBackend extends BackendAdapter {
                         await this.client.join(this.backendModel.gameCode, {
                             doSpawn: false
                         });
+                    }
+
+                    const hostData = this.playerData.find(p => p.clientId === payload.hostid);
+
+                    if (hostData) {
+                        this.emitHostChange(hostData.name);
                     }
                     console.log("removed player");
                 } else if (payload.payloadid === PayloadID.GameData || payload.payloadid === PayloadID.GameDataTo) {
@@ -158,7 +172,11 @@ export default class PublicLobbyBackend extends BackendAdapter {
             };
 
             const handleRPC = (rpcPart: RPCMessage) => {
-                if (rpcPart.rpcid === RPCID.StartMeeting) {
+                if (rpcPart.rpcid === RPCID.SyncSettings) {
+                    this.emitSettingsUpdate({
+                        crewmateVision: rpcPart.options.crewVision
+                    });
+                } else if (rpcPart.rpcid === RPCID.StartMeeting) {
                     setTimeout(() => {
                         this.emitAllPlayerPoses({ x: 0, y: 0 });
                     }, 2500);
@@ -260,7 +278,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
             this.emitError("Couldn't connect to the Among Us servers, the server may be full, try again later!");
             return;
         }
-        let game;
+        let game: Game;
         try {
             game = await client.join(this.backendModel.gameCode, {
                 doSpawn: true
@@ -284,6 +302,10 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 });
             }
         });
+        const hostData = this.playerData.find(p => p.clientId === game.hostid);
+        if (hostData) {
+            this.emitHostChange(hostData.name);
+        }
         await client.disconnect();
     }
 

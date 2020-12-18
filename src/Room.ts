@@ -139,11 +139,11 @@ export default class Room {
         client.sendOptions(this.options);
         client.setHost(client.name === this.hostname);
     }
-    setOptions(options: HostOptions) {
+    setOptions(options: HostOptions, host: boolean = false) {
         this.options = options;
 
         this.members.forEach(c => {
-            if (c.name !== this.hostname) c.sendOptions(options);
+            if (c.name !== this.hostname || host) c.sendOptions(options);
         });
     }
     async removeClient(client: Client): Promise<void> {

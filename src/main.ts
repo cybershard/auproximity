@@ -1,12 +1,13 @@
-import http from "http";
-import express from "express";
 import socketio, {Socket} from "socket.io";
-import {v4} from "uuid";
+
 import Client from "./Client";
-import Room from "./Room";
 import {ExpressPeerServer} from "peer";
+import Room from "./Room";
+import express from "express";
+import http from "http";
 import path from "path";
 import sslRedirect from "heroku-ssl-redirect";
+import {v4} from "uuid";
 
 const app = express();
 app.use(sslRedirect());
@@ -16,6 +17,7 @@ const server = http.createServer(app);
 const io = new socketio.Server(server, process.env.NODE_ENV === "production" ? {} : {
     cors: { origin: "http://localhost:8080" }
 });
+
 app.use("/peerjs", ExpressPeerServer({
     // eslint-disable-next-line
     // @ts-ignore
@@ -36,6 +38,7 @@ export const state: {
     allClients: [],
     allRooms: []
 };
+
 io.on("connection", (socket: Socket) => {
     const client = new Client(socket, v4());
     state.allClients.push(client);

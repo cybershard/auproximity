@@ -1,17 +1,20 @@
 import {
-    BackendAdapter, BackendEvent,
+    BackendAdapter,
+    BackendEvent,
     BackendModel,
     BackendType,
     GameSettings,
     HostOptions,
     ImpostorBackendModel,
     MapIdModel,
-    PublicLobbyBackendModel, RoomGroup
+    PublicLobbyBackendModel,
+    RoomGroup
 } from "./types/Backend";
 import Client, {Pose} from "./Client";
+
 import ImpostorBackend from "./backends/ImpostorBackend";
-import PublicLobbyBackend from "./backends/PublicLobbyBackend";
 import NoOpBackend from "./backends/NoOpBackend";
+import PublicLobbyBackend from "./backends/PublicLobbyBackend";
 import {state} from "./main";
 
 export default class Room {

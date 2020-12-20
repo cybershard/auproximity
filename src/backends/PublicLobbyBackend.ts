@@ -5,36 +5,38 @@ import {
     PublicLobbyRegion,
     RoomGroup
 } from "../types/Backend";
-
 import {
-    SkeldjsClient,
+    GameDataMessage,
+    SpawnMessage
+} from "../../SkeldJS/ts/src/game/protocol/packets/GameData";
+import {
+    GameDataPayload,
+    PayloadMessage,
+} from "../../SkeldJS/ts/src/game/protocol/packets/Payloads"
+import {
     MapID,
     MasterServers,
     MessageID,
     Opcode,
     PayloadTag,
     RpcID,
-    SpawnID
+    SkeldjsClient,
+    SpawnID,
+    SystemType
 } from "../../SkeldJS/ts";
-
 import {
-    RpcMessage, SyncSettingsRpc
+    RpcMessage,
+    SyncSettingsRpc
 } from "../../SkeldJS/ts/src/game/protocol/packets/RpcMessages";
 
-import {
-    GameDataMessage,
-    SpawnMessage
-} from "../../SkeldJS/ts/src/game/protocol/packets/GameData";
-
-import {
-    GameDataPayload,
-    PayloadMessage,
-} from "../../SkeldJS/ts/src/game/protocol/packets/Payloads"
-import { Lerp } from "../../SkeldJS/ts/src/util/Vector";
-import { Room } from "../../SkeldJS/ts/src/game/Room";
+import { CustomNetworkTransform } from "../../SkeldJS/ts/src/game/components/CustomNetworkTransform";
 import { GameOptions } from "../../SkeldJS/ts/src/game/protocol/misc/GameOptions";
-import { Networkable } from "../../SkeldJS/ts/src/game/Networkable";
 import { Heritable } from "../../SkeldJS/ts/src/game/Heritable";
+import { HqHudSystem } from "../../SkeldJS/ts/src/game/systems/HqHudSystem";
+import { HudOverrideSystem } from "../../SkeldJS/ts/src/game/systems/HudOverrideSystem";
+import { Networkable } from "../../SkeldJS/ts/src/game/Networkable";
+import { PlayerData } from "../../SkeldJS/ts/src/game/PlayerData";
+import { Room } from "../../SkeldJS/ts/src/game/Room";
 
 const GAME_VERSION = "2020.11.17.0";
 
@@ -45,18 +47,27 @@ export default class PublicLobbyBackend extends BackendAdapter {
         this.backendModel = backendModel;
     }
 
-    playerData: {
-        name: string;
-        clientId: number;
-        playerId: number;
-        controlNetId: number;
-        transformNetId: number;
-    }[] = [];
     client: SkeldjsClient;
     currentMap: MapID;
-    shipStatusNetId = -1;
 
     objects_cache: Map<number, Heritable>;
+    components_cache: Map<number, Networkable>;
+
+    async doJoin(server: [ string, number ]) {
+        await this.client.connect(server[0], server[1]);
+        await this.client.identify("auproxy");
+        await this.client.join(this.backendModel.gameCode, false);
+        
+        for (let [ id, object ] of this.objects_cache) {
+            object.room = this.client.room;
+            this.client.room.objects.set(id, object);
+        }
+        
+        for (let [ id, component ] of this.components_cache) {
+            component.room = this.client.room;
+            this.client.room.components.set(id, component);
+        }
+    }
 
     async initialize(): Promise<void> {
         try {
@@ -79,44 +90,26 @@ export default class PublicLobbyBackend extends BackendAdapter {
 
             await this.initialSpawn(server);
 
-            // restart new client
-            this.client = new SkeldjsClient(GAME_VERSION);
-            this.client.on("packet", packet => {
-                // console.log(util.inspect(packet, false, 10, true));
-                if (packet.op === Opcode.Reliable || packet.op === Opcode.Unreliable) {
-                    packet.payloads.forEach(async payload => await handlePayload(payload));
-                }
-            });
-
             const handlePayload = async (payload: PayloadMessage) => {
                 if (payload.tag === PayloadTag.JoinGame && payload.bound === "client" && payload.error === false) {
-                    const hostData = this.playerData.find(p => p.clientId === payload.hostid);
-
-                    if (hostData) {
-                        this.emitHostChange(hostData.name);
+                    if (this.client.room.host && this.client.room.host.data) {
+                        this.emitHostChange(this.client.room.host.data.name);
                     }
                 } else if (payload.tag === PayloadTag.StartGame) {
                     this.emitAllPlayerJoinGroups(RoomGroup.Main);
                     console.log("started game");
                 } else if (payload.tag === PayloadTag.EndGame) {
                     this.emitAllPlayerJoinGroups(RoomGroup.Spectator);
-                    this.playerData = [];
                     await this.client.join(this.backendModel.gameCode, false);
                     console.log("ended game");
                 } else if (payload.tag === PayloadTag.RemovePlayer && payload.bound == "client") {
-                    this.playerData = this.playerData.filter(p => p.clientId !== payload.clientid);
-                    // Handler for if the game sets us to host. Might be a hacky way.
-                    if (payload.clientid === this.client.clientid) {
+                    if (this.client.room.amhost) {
                         await this.client.disconnect();
-                        await this.client.connect(server[0], server[1]);
-                        await this.client.identify("auproxy");
-                        await this.client.join(this.backendModel.gameCode, false);
+                        await this.doJoin(server);
                     }
-
-                    const hostData = this.playerData.find(p => p.clientId === payload.hostid);
-
-                    if (hostData) {
-                        this.emitHostChange(hostData.name);
+                    
+                    if (this.client.room.host && this.client.room.host.data) {
+                        this.emitHostChange(this.client.room.host.data.name);
                     }
                     console.log("removed player");
                 } else if (payload.tag === PayloadTag.GameData || payload.tag === PayloadTag.GameDataTo) {
@@ -128,42 +121,24 @@ export default class PublicLobbyBackend extends BackendAdapter {
 
             const handleGameDataPart = (message: GameDataMessage) => {
                 if (message.tag == MessageID.Data) {
-                    const player = this.playerData.find(p => p.transformNetId === message.netid);
-                    if (player) {
-                        const reader = message.data;
-                        reader.goto(0);
-                        reader.uint16LE();
-                        const pose = {
-                            x: Lerp(reader.uint16LE() / 65535, -40, 40),
-                            y: Lerp(reader.uint16LE() / 65535, -40, 40)
-                        };
-                        this.emitPlayerPose(player.name, pose);
-                    }
-                    if (message.netid === this.shipStatusNetId) {
-                        const reader = message.data;
-                        reader.goto(0);
-                        const systemsMask = reader.packed();
-                        // if the systemsMask contains communication
-                        if ((systemsMask & (1 << 14)) != 0) {
-                            if (this.currentMap === MapID.TheSkeld ||
-                                this.currentMap === MapID.Polus) {
-                                // if it is sabotaged
-                                if (reader.bool()) {
+                    if (message.netid === this.client.room.global.shipstatus?.netid) {
+                        if (this.currentMap === MapID.TheSkeld || this.currentMap === MapID.Polus) {
+                            const comms = this.client.room.global.shipstatus?.systems?.[SystemType.Communications] as HudOverrideSystem;
+                            
+                            if (comms) {
+                                if (comms.sabotaged) {
                                     this.emitPlayerFromJoinGroup(RoomGroup.Main, RoomGroup.Muted);
                                 } else {
                                     this.emitPlayerFromJoinGroup(RoomGroup.Muted, RoomGroup.Main);
                                 }
-                            } else if (this.currentMap === MapID.MiraHQ) {
-                                let consoleCount = reader.packed();
-                                for (let i = 0; i < consoleCount; i++) {
-                                    reader.byte();
-                                    reader.byte();
-                                }
-                                consoleCount = reader.packed();
-                                if (consoleCount === 0) {
+                            }
+                        } else if (this.currentMap === MapID.MiraHQ) {
+                            const comms = this.client.room.global.shipstatus?.systems?.[SystemType.Communications] as HqHudSystem;
+                            
+                            if (comms) {
+                                if (comms.completed.length === 0) {
                                     this.emitPlayerFromJoinGroup(RoomGroup.Main, RoomGroup.Muted);
-                                }
-                                if (consoleCount === 2 && reader.bool() === true && reader.bool() === true) {
+                                } else if (comms.completed.length === 2 && comms.completed.every(console => console > 0)) {
                                     this.emitPlayerFromJoinGroup(RoomGroup.Muted, RoomGroup.Main);
                                 }
                             }
@@ -171,8 +146,6 @@ export default class PublicLobbyBackend extends BackendAdapter {
                     }
                 } else if (message.tag == MessageID.RPC) {
                     handleRPC(message);
-                } else if (message.tag == MessageID.Spawn) {
-                    handleSpawnMessage(message);
                 }
             };
 
@@ -188,81 +161,50 @@ export default class PublicLobbyBackend extends BackendAdapter {
                     console.log("meeting started");
                 } else if (rpcPart.rpcid === RpcID.VotingComplete) {
                     console.log("meeting ended with rpc packet: ", rpcPart);
-                    console.log("current playerData: ", this.playerData);
                     if (rpcPart.exiled !== 0xff) {
                         setTimeout(() => {
-                            const player = this.playerData.find(p => p.playerId === rpcPart.exiled);
-                            if (player) {
-                                this.emitPlayerJoinGroup(player.name, RoomGroup.Spectator);
-                                console.log("voted off: " + player.name);
+                            const player = this.client.room.getPlayerByPlayerId(rpcPart.exiled);
+                            
+                            if (player && player.data) {
+                                this.emitPlayerJoinGroup(player.data.name, RoomGroup.Spectator);
+                                console.log("voted off: " + player.data.name);
                             }
                         }, 2500);
                     }
                 } else if (rpcPart.rpcid === RpcID.MurderPlayer) {
-                    const player = this.playerData.find(p => p.controlNetId === rpcPart.victimid);
-                    if (player) this.emitPlayerJoinGroup(player.name, RoomGroup.Spectator);
-                    console.log("murdered " + player.name);
-                } else if (rpcPart.rpcid === RpcID.SetName) {
-                    const player = this.playerData.find(p => p.controlNetId === rpcPart.netid);
-                    if (player) {
-                        player.name = rpcPart.name;
-                    } else {
-                        this.playerData.push({
-                            name: rpcPart.name,
-                            controlNetId: rpcPart.netid,
-                            playerId: -1,
-                            clientId: -1,
-                            transformNetId: -1
-                        });
-                    }
-                    console.log("set someone name to: " + rpcPart.name);
-                } else if (rpcPart.rpcid === RpcID.SnapTo) {
-                    const player = this.playerData.find(p => p.transformNetId === rpcPart.netid);
-                    if (player) {
-                        const pose = {
-                            x: Lerp(rpcPart.position.x / 65535, -40, 40),
-                            y: Lerp(rpcPart.position.y / 65535, -40, 40)
-                        };
-                        this.emitPlayerPose(player.name, pose);
+                    const player = [...this.client.room.players.values()].find(player => player.control?.netid === rpcPart.victimid);
+                    
+                    if (player && player.data) {
+                        this.emitPlayerJoinGroup(player.data.name, RoomGroup.Spectator);
+                        
+                        console.log("murdered " + player.data.name);
                     }
                 }
             };
 
-            const handleSpawnMessage = (spawnPart: SpawnMessage) => {
-                if (spawnPart.type === SpawnID.Player) {
-                    const controlReader = spawnPart.components[0].data;
-                    controlReader.goto(0);
-                    controlReader.bool();
+            await this.doJoin(server);
 
-                    const player = this.playerData.find(p => p.controlNetId === spawnPart.components[0].netid);
-                    if (player) {
-                        player.clientId = spawnPart.ownerid;
-                        player.playerId = controlReader.uint8();
-                        player.transformNetId = spawnPart.components[2].netid;
-                    } else {
-                        this.playerData.push({
-                            name: "",
-                            clientId: spawnPart.ownerid,
-                            playerId: controlReader.uint8(),
-                            controlNetId: spawnPart.components[0].netid,
-                            transformNetId: spawnPart.components[2].netid,
-                        });
-                    }
-                    console.log("player spawned in");
-                } else if (spawnPart.type === SpawnID.ShipStatus ||
-                            spawnPart.type === SpawnID.HeadQuarters ||
-                            spawnPart.type === SpawnID.PlanetMap ||
-                            spawnPart.type === SpawnID.AprilShipStatus) {
-                    this.shipStatusNetId = spawnPart.components[0].netid;
+            this.client.on("disconnect", (reason, message) => {
+                console.log("Client disconnected: " + reason + " (" + message + ")");
+            });
+            
+            this.client.on("packet", packet => {
+                if (packet.op === Opcode.Reliable || packet.op === Opcode.Unreliable) {
+                    packet.payloads.forEach(async payload => await handlePayload(payload));
                 }
-            };
+            });
 
-            await this.client.connect(server[0], server[1]);
-            await this.client.identify("auproxy");
-            await this.client.join(this.backendModel.gameCode, false);
-            for (let [ id, object ] of this.objects_cache) {
-                this.client.room.objects.set(id, object);
-            }
+            this.client.on("move", (room: Room, player: PlayerData, transform: CustomNetworkTransform) => {
+                if (transform.owner && transform.owner.data) {
+                    this.emitPlayerPose(transform.owner.data.name, transform.position);
+                }
+            });
+
+            this.client.on("snapTo", (room: Room, player: PlayerData, transform: CustomNetworkTransform) => {
+                if (transform.owner && transform.owner.data) {
+                    this.emitPlayerPose(transform.owner.data.name, transform.position);
+                }
+            });
 
             console.log(`Initialized PublicLobby Backend for game: ${this.backendModel.gameCode}`);
         } catch (err) {
@@ -322,13 +264,10 @@ export default class PublicLobbyBackend extends BackendAdapter {
     }
 
     async initialSpawn(server: [string, number]): Promise<void> {
-        this.playerData = [];
-        this.shipStatusNetId = -1;
-
-        const client = new SkeldjsClient(GAME_VERSION);
+        this.client = new SkeldjsClient(GAME_VERSION);
         try {
-            await client.connect(server[0], server[1]);
-            await client.identify("auproxy");
+            await this.client.connect(server[0], server[1]);
+            await this.client.identify("auproxy");
         } catch (e) {
             console.error("An error occurred", e);
             this.emitError("Couldn't connect to the Among Us servers, the server may be full, try again later!");
@@ -336,32 +275,22 @@ export default class PublicLobbyBackend extends BackendAdapter {
         }
         let room: Room;
         try {
-            room = await client.join(this.backendModel.gameCode);
+            room = await this.client.join(this.backendModel.gameCode);
         } catch (e) {
             console.error("Couldn't join game", e);
             this.emitError("Couldn't join the game, make sure that the game hasn't started and there is a spot for the client!");
             return;
         }
         await this.awaitSpawns(room);
-        const settings = await this.awaitSettings(client);
+        const settings = await this.awaitSettings(this.client);
         this.currentMap = settings.map;
         this.emitMapChange(MapIdModel[MapID[settings.map]]);
-        room.players.forEach(client => {
-            if (client.data && client.data.name !== "") {
-                this.playerData.push({
-                    name: client.data.name,
-                    clientId: client.id,
-                    playerId: client.playerId,
-                    controlNetId: client.control.netid,
-                    transformNetId: client.transform.netid
-                });
-            }
-        });
         if (room.host && room.host.data) {
             this.emitHostChange(room.host.data.name);
         }
-        this.objects_cache = new Map([...room.objects.entries()].filter(([ objectid ]) => objectid !== client.clientid));
-        await client.disconnect();
+        this.objects_cache = new Map([...room.objects.entries()].filter(([ objectid ]) => objectid !== this.client.clientid));
+        this.components_cache = new Map([...room.components.entries()].filter(([ , component ]) => component.ownerid !== this.client.clientid));
+        await this.client.disconnect();
     }
 
     async destroy(): Promise<void> {

@@ -18,7 +18,7 @@ import {
 } from "../../SkeldJS/ts";
 
 import {
-    RpcMessage
+    RpcMessage, SyncSettingsRpc
 } from "../../SkeldJS/ts/src/game/protocol/packets/RpcMessages";
 
 import {
@@ -27,13 +27,16 @@ import {
 } from "../../SkeldJS/ts/src/game/protocol/packets/GameData";
 
 import {
+    GameDataPayload,
     PayloadMessage,
 } from "../../SkeldJS/ts/src/game/protocol/packets/Payloads"
 import { Lerp } from "../../SkeldJS/ts/src/util/Vector";
 import { Room } from "../../SkeldJS/ts/src/game/Room";
-import { composeOptions } from "../../SkeldJS/ts/src/game/protocol/composePacket";
+import { GameOptions } from "../../SkeldJS/ts/src/game/protocol/misc/GameOptions";
+import { Networkable } from "../../SkeldJS/ts/src/game/Networkable";
+import { Heritable } from "../../SkeldJS/ts/src/game/Heritable";
 
-const GAME_VERSION = "2020.12.5.0";
+const GAME_VERSION = "2020.11.17.0";
 
 export default class PublicLobbyBackend extends BackendAdapter {
     backendModel: PublicLobbyBackendModel
@@ -52,6 +55,8 @@ export default class PublicLobbyBackend extends BackendAdapter {
     client: SkeldjsClient;
     currentMap: MapID;
     shipStatusNetId = -1;
+
+    objects_cache: Map<number, Heritable>;
 
     async initialize(): Promise<void> {
         try {
@@ -126,6 +131,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
                     const player = this.playerData.find(p => p.transformNetId === message.netid);
                     if (player) {
                         const reader = message.data;
+                        reader.goto(0);
                         reader.uint16LE();
                         const pose = {
                             x: Lerp(reader.uint16LE() / 65535, -40, 40),
@@ -135,6 +141,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
                     }
                     if (message.netid === this.shipStatusNetId) {
                         const reader = message.data;
+                        reader.goto(0);
                         const systemsMask = reader.packed();
                         // if the systemsMask contains communication
                         if ((systemsMask & (1 << 14)) != 0) {
@@ -224,6 +231,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
             const handleSpawnMessage = (spawnPart: SpawnMessage) => {
                 if (spawnPart.type === SpawnID.Player) {
                     const controlReader = spawnPart.components[0].data;
+                    controlReader.goto(0);
                     controlReader.bool();
 
                     const player = this.playerData.find(p => p.controlNetId === spawnPart.components[0].netid);
@@ -252,6 +260,9 @@ export default class PublicLobbyBackend extends BackendAdapter {
             await this.client.connect(server[0], server[1]);
             await this.client.identify("auproxy");
             await this.client.join(this.backendModel.gameCode, false);
+            for (let [ id, object ] of this.objects_cache) {
+                this.client.room.objects.set(id, object);
+            }
 
             console.log(`Initialized PublicLobby Backend for game: ${this.backendModel.gameCode}`);
         } catch (err) {
@@ -286,6 +297,30 @@ export default class PublicLobbyBackend extends BackendAdapter {
         });
     }
 
+    awaitSettings(client: SkeldjsClient) {
+        return new Promise<GameOptions>(resolve => {
+            client.on("packet", function onPacket(packet) {
+                if (packet.bound === "client" && packet.op === Opcode.Reliable) {
+                    const gamedata = packet.payloads.find(
+                        payload => payload.tag === PayloadTag.GameData &&
+                        payload.messages.some(message =>
+                            message.tag === MessageID.RPC &&
+                            message.rpcid === RpcID.SyncSettings)) as GameDataPayload;
+
+                    if (gamedata) {
+                        const syncsettings = gamedata.messages.find(message => message.tag === MessageID.RPC && message.rpcid === RpcID.SyncSettings) as SyncSettingsRpc;
+
+                        if (syncsettings) {
+                            client.off("packet", onPacket);
+
+                            resolve(syncsettings.settings);
+                        }
+                    }
+                }
+            })
+        });
+    }
+
     async initialSpawn(server: [string, number]): Promise<void> {
         this.playerData = [];
         this.shipStatusNetId = -1;
@@ -308,8 +343,9 @@ export default class PublicLobbyBackend extends BackendAdapter {
             return;
         }
         await this.awaitSpawns(room);
-        this.currentMap = room.settings.map;
-        this.emitMapChange(MapIdModel[MapID[room.settings.map]]);
+        const settings = await this.awaitSettings(client);
+        this.currentMap = settings.map;
+        this.emitMapChange(MapIdModel[MapID[settings.map]]);
         room.players.forEach(client => {
             if (client.data && client.data.name !== "") {
                 this.playerData.push({
@@ -324,6 +360,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
         if (room.host && room.host.data) {
             this.emitHostChange(room.host.data.name);
         }
+        this.objects_cache = new Map([...room.objects.entries()].filter(([ objectid ]) => objectid !== client.clientid));
         await client.disconnect();
     }
 

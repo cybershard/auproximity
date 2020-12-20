@@ -35,7 +35,7 @@ import intersect from 'path-intersection'
 import ClientListItem from '@/components/ClientListItem.vue'
 import MyClientListItem from '@/components/MyClientListItem.vue'
 import HostOptions from '@/components/HostOptions.vue'
-import { GameSettings } from '../../../src/types/Backend'
+import { GameSettings } from '@/models/RoomModel'
 
 @Component({
   components: { MyClientListItem, ClientListItem, HostOptions },
@@ -60,7 +60,9 @@ export default class ServerDisplayer extends Vue {
   remotectx?: AudioContext;
   remoteStreams: RemoteStreamModel[] = [];
 
-  settings: GameSettings;
+  settings: GameSettings = {
+    crewmateVision: 2.7
+  };
 
   /**
    * Starts a PeerJS connection, handles answering calls and auto-reconnects to PeerJS and remote peer MediaStreams on error

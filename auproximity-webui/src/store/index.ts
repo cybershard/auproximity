@@ -1,9 +1,10 @@
+import { BackendModel, BackendType, RoomGroup } from '@/models/BackendModel'
+import ClientModel, { ColorID, MyMicModel, Pose } from '@/models/ClientModel'
+
+import ClientSocketEvents from '@/models/ClientSocketEvents'
+import { HostOptions } from '@/models/RoomModel'
 import Vue from 'vue'
 import Vuex from 'vuex'
-import ClientSocketEvents from '@/models/ClientSocketEvents'
-import ClientModel, { MyMicModel, Pose } from '@/models/ClientModel'
-import { BackendModel, BackendType, RoomGroup } from '@/models/BackendModel'
-import { HostOptions } from '@/models/RoomModel'
 
 Vue.config.devtools = true
 Vue.use(Vuex)
@@ -25,7 +26,8 @@ const state: State = {
       x: 0,
       y: 0
     },
-    group: RoomGroup.Spectator
+    group: RoomGroup.Spectator,
+    color: -1
   },
   clients: [],
   options: {
@@ -58,6 +60,15 @@ export default new Vuex.Store({
       const index = state.clients.findIndex(c => c.uuid === payload.uuid)
       if (index !== -1) {
         state.clients[index].pose = payload.pose
+      }
+    },
+    setColor (state: State, payload: { color: ColorID }) {
+      state.me.color = payload.color
+    },
+    setColorOf (state: State, payload: { uuid: string; color: ColorID }) {
+      const index = state.clients.findIndex(c => c.uuid === payload.uuid)
+      if (index !== -1) {
+        state.clients[index].color = payload.color
       }
     },
     setGroup (state: State, payload: RoomGroup) {
@@ -104,21 +115,23 @@ export default new Vuex.Store({
     [`socket_${ClientSocketEvents.SetUuid}`] ({ commit }, uuid: string) {
       commit('setUuid', uuid)
     },
-    [`socket_${ClientSocketEvents.AddClient}`] ({ commit }, payload: { uuid: string; name: string; pose: Pose; group: RoomGroup }) {
+    [`socket_${ClientSocketEvents.AddClient}`] ({ commit }, payload: ClientModel) {
       const client: ClientModel = {
         uuid: payload.uuid,
         name: payload.name,
         pose: payload.pose,
-        group: payload.group
+        group: payload.group,
+        color: payload.color
       }
       commit('addClient', client)
     },
-    [`socket_${ClientSocketEvents.SetAllClients}`] ({ commit }, payload: { uuid: string; name: string; pose: Pose; group: RoomGroup }[]) {
+    [`socket_${ClientSocketEvents.SetAllClients}`] ({ commit }, payload: ClientModel[]) {
       const clients: ClientModel[] = payload.map(c => ({
         uuid: c.uuid,
         name: c.name,
         pose: c.pose,
-        group: c.group
+        group: c.group,
+        color: c.color
       }))
       commit('setAllClients', clients)
     },
@@ -130,6 +143,13 @@ export default new Vuex.Store({
         commit('setPose', payload.pose)
       } else {
         commit('setPoseOf', { uuid: payload.uuid, pose: payload.pose })
+      }
+    },
+    [`socket_${ClientSocketEvents.SetColorOf}`] ({ commit, state }, payload: { uuid: string; color: ColorID }) {
+      if (payload.uuid === state.me.uuid) {
+        commit('setColor', payload.color)
+      } else {
+        commit('setColorOf', { uuid: payload.uuid, color: payload.color })
       }
     },
     [`socket_${ClientSocketEvents.SetGroup}`] ({ commit, state }, payload: { uuid: string; group: RoomGroup }) {

@@ -1,3 +1,4 @@
+import { ColorID } from "../../SkeldJS/ts";
 import { EventEmitter } from "events";
 import {Pose} from "../Client";
 
@@ -74,6 +75,9 @@ export abstract class BackendAdapter extends EventEmitter {
     emitPlayerPose(name: string, pose: Pose): void {
         this.emit(BackendEvent.PlayerPose, { name, pose });
     }
+    emitPlayerColor(name: string, color: ColorID) {
+        this.emit(BackendEvent.PlayerColor, { name, color });
+    }
     emitPlayerJoinGroup(name: string, group: RoomGroup): void {
         this.emit(BackendEvent.PlayerJoinGroup, { name, group });
     }
@@ -100,6 +104,7 @@ export abstract class BackendAdapter extends EventEmitter {
 export enum BackendEvent {
     MapChange = "mapchange",
     PlayerPose = "playerpose",
+    PlayerColor = "playercolor",
     PlayerJoinGroup = "playerjoingroup",
     AllPlayerPoses = "allplayerposes",
     AllPlayerJoinGroups = "allplayerjoingroup",

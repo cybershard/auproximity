@@ -9,6 +9,7 @@ enum ClientSocketEvents {
     SetMap = 'setmap',
     SetPose = 'setpose',
     SetGroup = 'setgroup',
+    SetColorOf = 'setcolorof',
     SetHost = 'sethost',
     SetOptions = 'setoptions',
     SetSettings = 'setsettings'

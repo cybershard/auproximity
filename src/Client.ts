@@ -1,18 +1,22 @@
-import {Socket} from "socket.io";
-import ClientSocketEvents from "./types/ClientSocketEvents";
 import {
     BackendModel,
-    BackendType, BepInExBackendModel,
+    BackendType,
+    BepInExBackendModel,
     GameSettings,
     HostOptions,
     ImpostorBackendModel,
-    MapIdModel, NodePolusBackendModel,
+    MapIdModel,
+    NodePolusBackendModel,
     PublicLobbyBackendModel,
     RoomGroup
 } from "./types/Backend";
-import Room from "./Room";
-import {state} from "./main";
+
+import ClientSocketEvents from "./types/ClientSocketEvents";
+import { ColorID } from "../SkeldJS/ts";
 import {IClientBase} from "./types/IClientBase";
+import Room from "./Room";
+import {Socket} from "socket.io";
+import {state} from "./main";
 
 export interface Pose {
     x: number;
@@ -28,6 +32,7 @@ export default class Client implements IClientBase {
     public name: string;
     public group: RoomGroup;
     public pose: Pose;
+    public color: ColorID;
 
     constructor(socket: Socket, uuid: string) {
         this.socket = socket;
@@ -38,6 +43,7 @@ export default class Client implements IClientBase {
         };
         this.group = RoomGroup.Spectator;
         this.name = "";
+        this.color = -1;
 
         // Initialize socket events
         this.socket.on(ClientSocketEvents.Disconnect, async () => {
@@ -102,16 +108,18 @@ export default class Client implements IClientBase {
         uuid: string;
         name: string;
         pose: Pose;
-        group: RoomGroup
+        group: RoomGroup,
+        color: ColorID
     }[]): void {
         this.socket.emit(ClientSocketEvents.SetAllClients, array);
     }
-    addClient(uuid: string, name: string, pose: Pose, group: RoomGroup): void {
+    addClient(uuid: string, name: string, pose: Pose, group: RoomGroup, color: ColorID): void {
         this.socket.emit(ClientSocketEvents.AddClient, {
             uuid,
             name,
             pose,
-            group
+            group,
+            color
         });
     }
     removeClient(uuid: string): void {
@@ -131,6 +139,9 @@ export default class Client implements IClientBase {
             this.group = group;
         }
         this.socket.emit(ClientSocketEvents.SetGroup, { uuid, group });
+    }
+    setColorOf(uuid: string, color: ColorID) {
+        this.socket.emit(ClientSocketEvents.SetColorOf, { uuid, color });
     }
     setHost(ishost: boolean) {
         this.socket.emit(ClientSocketEvents.SetHost, { ishost });

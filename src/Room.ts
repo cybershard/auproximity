@@ -12,6 +12,7 @@ import {
 } from "./types/Backend";
 import Client, {Pose} from "./Client";
 
+import { ColorID } from "../SkeldJS/ts";
 import ImpostorBackend from "./backends/ImpostorBackend";
 import NoOpBackend from "./backends/NoOpBackend";
 import PublicLobbyBackend from "./backends/PublicLobbyBackend";
@@ -63,6 +64,17 @@ export default class Room {
                 // if the client connection exists, update all clients about the new position
                 this.members.forEach(c => {
                     c.setPoseOf(client.uuid, payload.pose);
+                });
+            }
+        });
+        this.backendAdapter.on(BackendEvent.PlayerColor, (payload: { name: string; color: ColorID }) => {
+            const client = this.members.find(c => c.name === payload.name);
+
+            if (client) {
+                client.color = payload.color;
+                
+                this.members.forEach(c => {
+                    c.setColorOf(client.uuid, client.color);
                 });
             }
         });
@@ -130,12 +142,13 @@ export default class Room {
         }
         client.setMap(this.map);
 
-        this.members.forEach(c => c.addClient(client.uuid, client.name, client.pose, client.group));
+        this.members.forEach(c => c.addClient(client.uuid, client.name, client.pose, client.group, client.color));
         client.setAllClients(this.members.map(c => ({
             uuid: c.uuid,
             name: c.name,
             pose: c.pose,
-            group: c.group
+            group: c.group,
+            color: c.color
         })));
         this.members.push(client);
 

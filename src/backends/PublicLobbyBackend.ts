@@ -5,6 +5,7 @@ import {
     PublicLobbyRegion,
     RoomGroup
 } from "../types/Backend";
+import { GameData, PlayerGameData } from "../../SkeldJS/ts/src/game/components/GameData";
 import {
     GameDataMessage,
     SpawnMessage
@@ -31,6 +32,7 @@ import {
 
 import { CustomNetworkTransform } from "../../SkeldJS/ts/src/game/components/CustomNetworkTransform";
 import { GameOptions } from "../../SkeldJS/ts/src/game/protocol/misc/GameOptions";
+import { Global } from "../../SkeldJS/ts/src/game/Global";
 import { Heritable } from "../../SkeldJS/ts/src/game/Heritable";
 import { HqHudSystem } from "../../SkeldJS/ts/src/game/systems/HqHudSystem";
 import { HudOverrideSystem } from "../../SkeldJS/ts/src/game/systems/HudOverrideSystem";
@@ -154,6 +156,12 @@ export default class PublicLobbyBackend extends BackendAdapter {
                     this.emitSettingsUpdate({
                         crewmateVision: rpcPart.settings.crewmateVision
                     });
+                } else if (rpcPart.rpcid === RpcID.SetColor) {
+                    const player = [...this.client.room.players.values()].find(player => player.control?.netid === rpcPart.netid);
+
+                    if (player && player.data) {
+                        this.emitPlayerColor(player.data.name, rpcPart.color)
+                    }
                 } else if (rpcPart.rpcid === RpcID.StartMeeting) {
                     setTimeout(() => {
                         this.emitAllPlayerPoses({ x: 0, y: 0 });
@@ -206,6 +214,12 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 }
             });
 
+            this.client.on("removePlayerData", (room: Room, global: Global, gamedata: GameData, playerData: PlayerGameData) => {
+                if (playerData) {
+                    this.emitPlayerColor(playerData.name, -1);
+                }
+            });
+
             console.log(`Initialized PublicLobby Backend for game: ${this.backendModel.gameCode}`);
         } catch (err) {
             console.warn("Error in PublicLobbyBackend, disposing room: " + err);
@@ -218,9 +232,17 @@ export default class PublicLobbyBackend extends BackendAdapter {
             let gamedataSpawned = false;
             let playersSpawned = [];
 
+            const _this = this;
+
             room.on("spawn", function onSpawn(component) {
                 if (component.classname === "GameData") {
                     gamedataSpawned = true;
+
+                    const gamedata = component as GameData;
+
+                    for (let [ , player ] of gamedata.players) {
+                        if (player.name) _this.emitPlayerColor(player.name, player.color)
+                    }
                 } else if (component.classname === "PlayerControl") {
                     playersSpawned.push(component.ownerid);
                 }

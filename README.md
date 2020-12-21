@@ -36,6 +36,9 @@ Follow the steps below to run a server and webui with hot-reload
 > Note: The `heroku-postbuild` script is for Heroku deployment only.
 > Do NOT use it for development or production testing, as it WILL break.
 
+## Selfhosting - Heroku
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+
 ## Selfhosting - Docker images
 I provide docker images to quickly setup a instance on a server or local development machine.
 There are two images: the stable release image, and the development image.

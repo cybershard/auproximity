@@ -37,6 +37,9 @@ import MyClientListItem from '@/components/MyClientListItem.vue'
 import HostOptions from '@/components/HostOptions.vue'
 import { GameSettings } from '@/models/RoomModel'
 
+const AudioContext = window.AudioContext || // Default
+  (window as any).webkitAudioContext // Safari and old versions of Chrome
+
 @Component({
   components: { MyClientListItem, ClientListItem, HostOptions },
   directives: {

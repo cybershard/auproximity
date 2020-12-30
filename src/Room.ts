@@ -10,7 +10,7 @@ import {
     PublicLobbyBackendModel,
     RoomGroup
 } from "./types/Backend";
-import Client, {Pose} from "./Client";
+import Client, {Pose, PlayerModel} from "./Client";
 
 import { ColorID } from "../SkeldJS/ts";
 import ImpostorBackend from "./backends/ImpostorBackend";
@@ -31,8 +31,10 @@ export default class Room {
         falloff: 2.7,
         falloffVision: false,
         colliders: true,
-        paSystems: true
+        paSystems: true,
+        omniscientGhosts: false
     };
+    players = new Map<string, PlayerModel>();
 
     constructor(backendModel: BackendModel) {
         this.backendModel = backendModel;
@@ -69,6 +71,14 @@ export default class Room {
         });
         this.backendAdapter.on(BackendEvent.PlayerColor, (payload: { name: string; color: ColorID }) => {
             const client = this.members.find(c => c.name === payload.name);
+
+            if (!this.players.get(payload.name)) {
+                this.players.set(payload.name, {
+                    color: payload.color
+                });
+            }
+
+            this.players.get(payload.name).color = payload.color;
 
             if (client) {
                 client.color = payload.color;
@@ -142,7 +152,11 @@ export default class Room {
         }
         client.setMap(this.map);
 
-        this.members.forEach(c => c.addClient(client.uuid, client.name, client.pose, client.group, client.color));
+        this.members.forEach(c => {
+            c.addClient(client.uuid, client.name, client.pose, client.group, client.color);
+            if (this.players.get(client.name)) c.setColorOf(client.uuid, this.players.get(client.name).color);
+        });
+
         client.setAllClients(this.members.map(c => ({
             uuid: c.uuid,
             name: c.name,

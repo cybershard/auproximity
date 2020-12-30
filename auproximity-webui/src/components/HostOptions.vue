@@ -42,6 +42,13 @@
         :disabled="!$store.state.joinedRoom"
         @change="updateOptions"
       ></v-checkbox>
+      <v-checkbox
+        label="Ghosts can hear everyone"
+        v-model="$store.state.options.omniscientGhosts"
+        :readonly="!$store.state.ishost"
+        :disabled="!$store.state.joinedRoom"
+        @change="updateOptions"
+      ></v-checkbox>
     </v-form>
   </v-card>
 </template>

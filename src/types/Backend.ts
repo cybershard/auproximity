@@ -55,6 +55,7 @@ export interface HostOptions {
     falloffVision: boolean;
     colliders: boolean;
     paSystems: boolean;
+    omniscientGhosts: boolean;
 }
 
 export interface GameSettings {

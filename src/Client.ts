@@ -23,6 +23,10 @@ export interface Pose {
     y: number;
 }
 
+export interface PlayerModel {
+    color: ColorID;
+}
+
 export default class Client implements IClientBase {
     public socket: Socket
     public room?: Room;

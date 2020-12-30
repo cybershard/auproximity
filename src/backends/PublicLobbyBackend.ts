@@ -5,40 +5,42 @@ import {
     PublicLobbyRegion,
     RoomGroup
 } from "../types/Backend";
-import { GameData, PlayerGameData } from "../../SkeldJS/ts/src/game/components/GameData";
+
+import { SkeldjsClient } from "@skeldjs/client"
+
 import {
-    GameDataMessage,
-    SpawnMessage
-} from "../../SkeldJS/ts/src/game/protocol/packets/GameData";
-import {
-    GameDataPayload,
-    PayloadMessage,
-} from "../../SkeldJS/ts/src/game/protocol/packets/Payloads"
-import {
-    MapID,
     MasterServers,
-    MessageID,
+    MapID,
     Opcode,
     PayloadTag,
+    MessageID,
     RpcID,
-    SkeldjsClient,
-    SpawnID,
     SystemType
-} from "../../SkeldJS/ts";
-import {
-    RpcMessage,
-    SyncSettingsRpc
-} from "../../SkeldJS/ts/src/game/protocol/packets/RpcMessages";
+} from "@skeldjs/constant"
 
-import { CustomNetworkTransform } from "../../SkeldJS/ts/src/game/components/CustomNetworkTransform";
-import { GameOptions } from "../../SkeldJS/ts/src/game/protocol/misc/GameOptions";
-import { Global } from "../../SkeldJS/ts/src/game/Global";
-import { Heritable } from "../../SkeldJS/ts/src/game/Heritable";
-import { HqHudSystem } from "../../SkeldJS/ts/src/game/systems/HqHudSystem";
-import { HudOverrideSystem } from "../../SkeldJS/ts/src/game/systems/HudOverrideSystem";
-import { Networkable } from "../../SkeldJS/ts/src/game/Networkable";
-import { PlayerData } from "../../SkeldJS/ts/src/game/PlayerData";
-import { Room } from "../../SkeldJS/ts/src/game/Room";
+import {
+    GameOptions,
+    PayloadMessage,
+    GameDataMessage,
+    RpcMessage,
+    GameDataPayload,
+    SyncSettingsRpc
+} from "@skeldjs/protocol"
+
+import {
+    PlayerGameData
+} from "@skeldjs/types"
+
+import {
+    Heritable,
+    Networkable,
+    HudOverrideSystem,
+    HqHudSystem,
+    Room,
+    PlayerData,
+    CustomNetworkTransform,
+    GameData
+} from "@skeldjs/common"
 
 const GAME_VERSION = "2020.11.17.0";
 
@@ -55,10 +57,19 @@ export default class PublicLobbyBackend extends BackendAdapter {
     objects_cache: Map<number, Heritable>;
     components_cache: Map<number, Networkable>;
 
-    async doJoin(server: [ string, number ]) {
+    async doJoin(server: [ string, number ], doSpawn = false, max_attempts = 5, attempt = 0) {
         await this.client.connect(server[0], server[1]);
         await this.client.identify("auproxy");
-        await this.client.join(this.backendModel.gameCode, false);
+
+        try {
+            await this.client.join(this.backendModel.gameCode, false);
+        } catch (e) {
+            const err = e as Error;
+            attempt++;
+
+            this.emitError(err.message + ". Retrying " + (max_attempts - attempt) + " more times.");
+            return await this.doJoin(server, doSpawn, max_attempts, attempt);
+        }
         
         for (let [ id, object ] of this.objects_cache) {
             object.room = this.client.room;
@@ -67,7 +78,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
         
         for (let [ id, component ] of this.components_cache) {
             component.room = this.client.room;
-            this.client.room.components.set(id, component);
+            this.client.room.netobjects.set(id, component);
         }
     }
 
@@ -83,11 +94,11 @@ export default class PublicLobbyBackend extends BackendAdapter {
             // rejoin game
             let server;
             if (this.backendModel.region === PublicLobbyRegion.NorthAmerica) {
-                server = MasterServers.NA[0];
+                server = MasterServers.NA[1];
             } else if (this.backendModel.region === PublicLobbyRegion.Europe) {
-                server = MasterServers.EU[0];
+                server = MasterServers.EU[1];
             } else if (this.backendModel.region === PublicLobbyRegion.Asia) {
-                server = MasterServers.AS[0];
+                server = MasterServers.AS[1];
             }
 
             await this.initialSpawn(server);
@@ -123,9 +134,9 @@ export default class PublicLobbyBackend extends BackendAdapter {
 
             const handleGameDataPart = (message: GameDataMessage) => {
                 if (message.tag == MessageID.Data) {
-                    if (message.netid === this.client.room.global.shipstatus?.netid) {
+                    if (message.netid === this.client.room.shipstatus?.netid) {
                         if (this.currentMap === MapID.TheSkeld || this.currentMap === MapID.Polus) {
-                            const comms = this.client.room.global.shipstatus?.systems?.[SystemType.Communications] as HudOverrideSystem;
+                            const comms = this.client.room.shipstatus?.systems?.[SystemType.Communications] as HudOverrideSystem;
                             
                             if (comms) {
                                 if (comms.sabotaged) {
@@ -135,7 +146,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
                                 }
                             }
                         } else if (this.currentMap === MapID.MiraHQ) {
-                            const comms = this.client.room.global.shipstatus?.systems?.[SystemType.Communications] as HqHudSystem;
+                            const comms = this.client.room.shipstatus?.systems?.[SystemType.Communications] as HqHudSystem;
                             
                             if (comms) {
                                 if (comms.completed.length === 0) {
@@ -190,7 +201,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 }
             };
 
-            await this.doJoin(server);
+            await this.doJoin(server, false);
 
             this.client.on("disconnect", (reason, message) => {
                 console.log("Client disconnected: " + reason + " (" + message + ")");
@@ -214,7 +225,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 }
             });
 
-            this.client.on("removePlayerData", (room: Room, global: Global, gamedata: GameData, playerData: PlayerGameData) => {
+            this.client.on("removePlayerData", (room: Room, global: Room, gamedata: GameData, playerData: PlayerGameData) => {
                 if (playerData) {
                     this.emitPlayerColor(playerData.name, -1);
                 }
@@ -222,7 +233,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
 
             console.log(`Initialized PublicLobby Backend for game: ${this.backendModel.gameCode}`);
         } catch (err) {
-            console.warn("Error in PublicLobbyBackend, disposing room: " + err);
+            console.warn("Error in PublicLobbyBackend, disposing room: ", err);
             this.emitError(err);
         }
     }

@@ -1,4 +1,4 @@
-import { ColorID } from "../../SkeldJS/ts";
+import { ColorID } from "@skeldjs/constant";
 import { EventEmitter } from "events";
 import {Pose} from "../Client";
 
@@ -55,7 +55,6 @@ export interface HostOptions {
     falloffVision: boolean;
     colliders: boolean;
     paSystems: boolean;
-    omniscientGhosts: boolean;
 }
 
 export interface GameSettings {

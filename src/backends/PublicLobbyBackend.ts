@@ -54,8 +54,9 @@ export default class PublicLobbyBackend extends BackendAdapter {
     client: SkeldjsClient;
     currentMap: MapID;
 
-    objects_cache: Map<number, Heritable>;
+    players_cache: Map<number, PlayerData>;
     components_cache: Map<number, Networkable>;
+    global_cache: Networkable[];
 
     async doJoin(server: [ string, number ], doSpawn = false, max_attempts = 5, attempt = 0) {
         await this.client.connect(server[0], server[1]);
@@ -71,7 +72,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
             return await this.doJoin(server, doSpawn, max_attempts, attempt);
         }
         
-        for (let [ id, object ] of this.objects_cache) {
+        for (let [ id, object ] of this.players_cache) {
             object.room = this.client.room;
             this.client.room.objects.set(id, object);
         }
@@ -79,6 +80,13 @@ export default class PublicLobbyBackend extends BackendAdapter {
         for (let [ id, component ] of this.components_cache) {
             component.room = this.client.room;
             this.client.room.netobjects.set(id, component);
+        }
+
+        for (let i = 0; i < this.global_cache.length; i++) {
+            const component = this.global_cache[i];
+
+            component.room = this.client.room;
+            this.client.room.components[i] = component;
         }
     }
 
@@ -168,7 +176,9 @@ export default class PublicLobbyBackend extends BackendAdapter {
                         crewmateVision: rpcPart.settings.crewmateVision
                     });
                 } else if (rpcPart.rpcid === RpcID.SetColor) {
-                    const player = [...this.client.room.players.values()].find(player => player.control?.netid === rpcPart.netid);
+                    const player = [...this.client.room.players.values()].find(player => {
+                        return player.control?.netid === rpcPart.netid
+                    });
 
                     if (player && player.data) {
                         this.emitPlayerColor(player.data.name, rpcPart.color)
@@ -214,18 +224,21 @@ export default class PublicLobbyBackend extends BackendAdapter {
             });
 
             this.client.on("move", (room: Room, player: PlayerData, transform: CustomNetworkTransform) => {
+                console.log("move", transform.position);
                 if (transform.owner && transform.owner.data) {
                     this.emitPlayerPose(transform.owner.data.name, transform.position);
                 }
             });
 
             this.client.on("snapTo", (room: Room, player: PlayerData, transform: CustomNetworkTransform) => {
+                console.log("snapTo", transform.position);
                 if (transform.owner && transform.owner.data) {
                     this.emitPlayerPose(transform.owner.data.name, transform.position);
                 }
             });
 
-            this.client.on("removePlayerData", (room: Room, global: Room, gamedata: GameData, playerData: PlayerGameData) => {
+            this.client.on("removePlayerData", (room: Room, gamedata: GameData, playerData: PlayerGameData) => {
+                console.log("remove", playerData);
                 if (playerData) {
                     this.emitPlayerColor(playerData.name, -1);
                 }
@@ -321,8 +334,9 @@ export default class PublicLobbyBackend extends BackendAdapter {
         if (room.host && room.host.data) {
             this.emitHostChange(room.host.data.name);
         }
-        this.objects_cache = new Map([...room.objects.entries()].filter(([ objectid ]) => objectid !== this.client.clientid));
+        this.players_cache = new Map([...room.objects.entries()].filter(([ objectid ]) => objectid !== this.client.clientid && objectid > 0 /* not global */)) as Map<number, PlayerData>;
         this.components_cache = new Map([...room.components.entries()].filter(([ , component ]) => component.ownerid !== this.client.clientid));
+        this.global_cache = room.components;
         await this.client.disconnect();
     }
 

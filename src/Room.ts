@@ -12,7 +12,7 @@ import {
 } from "./types/Backend";
 import Client, {Pose, PlayerModel} from "./Client";
 
-import { ColorID } from "../SkeldJS/ts";
+import {ColorID} from "@skeldjs/constant";
 import ImpostorBackend from "./backends/ImpostorBackend";
 import NoOpBackend from "./backends/NoOpBackend";
 import PublicLobbyBackend from "./backends/PublicLobbyBackend";
@@ -31,8 +31,7 @@ export default class Room {
         falloff: 2.7,
         falloffVision: false,
         colliders: true,
-        paSystems: true,
-        omniscientGhosts: false
+        paSystems: true
     };
     players = new Map<string, PlayerModel>();
 

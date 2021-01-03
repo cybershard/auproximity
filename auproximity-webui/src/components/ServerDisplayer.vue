@@ -230,7 +230,7 @@ export default class ServerDisplayer extends Vue {
     if (payload.group === RoomGroup.Spectator) {
       if (payload.uuid === this.$store.state.me.uuid) {
         this.remoteStreams.forEach(s => {
-          if (this.$store.options.omniscientGhosts) {
+          if (this.$store.state.clientOptions.omniscientGhosts) {
             s.gainNode.gain.value = 1
             s.pannerNode.setPosition(0, 0, 0)
           }
@@ -272,7 +272,7 @@ export default class ServerDisplayer extends Vue {
 
   @Socket(ClientSocketEvents.SetPose)
   onSetPose (payload: { uuid: string; pose: Pose }) {
-    if (this.$store.state.me.group === RoomGroup.Main || (!this.$store.options.omniscientGhosts && this.$store.state.me.group === RoomGroup.Spectator)) {
+    if (this.$store.state.me.group === RoomGroup.Main || (!this.$store.state.clientOptions.omniscientGhosts && this.$store.state.me.group === RoomGroup.Spectator)) {
       if (payload.pose.x === 0 && payload.pose.y === 0) {
         this.remoteStreams.forEach(s => {
           const client: ClientModel = this.$store.state.clients.find((c: ClientModel) => c.uuid === s.uuid)

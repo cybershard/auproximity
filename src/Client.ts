@@ -12,7 +12,7 @@ import {
 } from "./types/Backend";
 
 import ClientSocketEvents from "./types/ClientSocketEvents";
-import { ColorID } from "../SkeldJS/ts";
+import {ColorID} from "@skeldjs/constant";
 import {IClientBase} from "./types/IClientBase";
 import Room from "./Room";
 import {Socket} from "socket.io";

@@ -76,19 +76,19 @@
   resolved "https://registry.yarnpkg.com/@sindresorhus/is/-/is-0.14.0.tgz#9fb3a3cf3132328151f353de4632e01e52102bea"
   integrity sha512-9NET910DNaIPngYnLLPeg+Ogzqsi9uM4mSboU5y6p8S5DzMTVEsJZrawi+BoDNUVBa2DhJqQYUFvMDfgU062LQ==
 
-"@skeldjs/client@^2.1.3":
-  version "2.1.3"
-  resolved "https://registry.yarnpkg.com/@skeldjs/client/-/client-2.1.3.tgz#fce748fd6b45e6f133da2885d59dc1033ba65b53"
-  integrity sha512-/EUlY6n/f6altAR1MNlpNK181HSKfPhTnzbeqrrfLakT8qv6a8smq+3Y/PvZhzb+WhdtO1CNlgqQ7HJhzTiVAQ==
+"@skeldjs/client@^2.1.7":
+  version "2.1.7"
+  resolved "https://registry.yarnpkg.com/@skeldjs/client/-/client-2.1.7.tgz#a2fc9b2e2f8b53f53731cd3f5d31a7957a76c05b"
+  integrity sha512-DgvOdnH6KxQxF4vNQJfJzqPCZCG1FxwnZKTq9YniN99XtHahM+2ZiQtm+iN2yLNTolCM6RaEmhGFeMR+MGVutw==
   dependencies:
-    "@skeldjs/common" "^2.1.3"
+    "@skeldjs/common" "^2.1.7"
     "@skeldjs/protocol" "^2.1.3"
     "@skeldjs/util" "^2.1.2"
 
-"@skeldjs/common@^2.1.3":
-  version "2.1.3"
-  resolved "https://registry.yarnpkg.com/@skeldjs/common/-/common-2.1.3.tgz#645fa6279a67a71c61610e348ba5f2f0aeec2260"
-  integrity sha512-YAVKyY+/QEHdN7GNeZmRUP2oBCnHuqYilk737n1mF796ihztVCrs8kAl6KkCnXz3tcfKbsiZc8gBSTx/1wyq+w==
+"@skeldjs/common@^2.1.7":
+  version "2.1.7"
+  resolved "https://registry.yarnpkg.com/@skeldjs/common/-/common-2.1.7.tgz#69090cba6d4b9dc198ab8ed5d3786154451783a7"
+  integrity sha512-v4A1oy9urfwIwqFWOdnKXcnVQAf691YVsfj4v45QHQzJchamSmnPbv/eCCjqhaMYT0R/IwWc49SEPTLsvpFBkA==
   dependencies:
     "@skeldjs/constant" "^2.1.3"
     "@skeldjs/protocol" "^2.1.3"

@@ -2,7 +2,7 @@ import { BackendModel, BackendType, RoomGroup } from '@/models/BackendModel'
 import ClientModel, { ColorID, MyMicModel, Pose } from '@/models/ClientModel'
 
 import ClientSocketEvents from '@/models/ClientSocketEvents'
-import { HostOptions } from '@/models/RoomModel'
+import { HostOptions, ClientOptions } from '@/models/RoomModel'
 import Vue from 'vue'
 import Vuex from 'vuex'
 
@@ -34,7 +34,9 @@ const state: State = {
     falloff: 4,
     falloffVision: false,
     colliders: true,
-    paSystems: true,
+    paSystems: true
+  },
+  clientOptions: {
     omniscientGhosts: false
   },
   ishost: false
@@ -177,5 +179,6 @@ export interface State {
   me: ClientModel;
   clients: ClientModel[];
   options: HostOptions;
+  clientOptions: ClientOptions;
   ishost: boolean;
 }

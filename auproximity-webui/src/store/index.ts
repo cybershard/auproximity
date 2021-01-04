@@ -29,9 +29,9 @@ const state: State = {
   },
   clients: [],
   options: {
-    falloff: 4,
+    falloff: 3.6,
     falloffVision: false,
-    colliders: true,
+    colliders: false,
     paSystems: true
   },
   ishost: false

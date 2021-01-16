@@ -177,7 +177,7 @@ export default class ServerConnector extends Vue {
 
   get shareSlug () {
     if (this.backendType === BackendType.Impostor || this.backendType === BackendType.NodePolus) {
-      return location.origin + '/' + BackendType[this.backendType] + '/' + this.ip + '/' + this.gameCode.toUpperCase()
+      return location.origin + '/' + BackendType[this.backendType] + '/' + encodeURIComponent(this.ip) + '/' + this.gameCode.toUpperCase()
     } else if (this.backendType === BackendType.PublicLobby) {
       return location.origin + '/' + BackendType[this.backendType] + '/' + PublicLobbyRegion[this.publicLobbyRegion] + '/' + this.gameCode.toUpperCase()
     }

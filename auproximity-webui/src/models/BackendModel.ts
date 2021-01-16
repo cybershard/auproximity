@@ -40,3 +40,5 @@ export enum RoomGroup {
   Spectator,
   Muted
 }
+
+export type AllSpecificBackendModels = PublicLobbyBackendModel | ImpostorBackendModel | NodePolusBackendModel | BepInExBackendModel

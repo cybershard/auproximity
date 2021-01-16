@@ -52,6 +52,7 @@ export default class Home extends Vue {
   githubUrl = consts.GITHUB_URL
 
   joinRoom (event: { name: string; backendModel: BackendModel }) {
+    console.log(event.backendModel)
     const payload = {
       name: event.name,
       backendModel: event.backendModel

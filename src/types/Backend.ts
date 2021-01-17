@@ -1,6 +1,11 @@
 import { ColorID } from "@skeldjs/constant";
 import { EventEmitter } from "events";
-import {Pose} from "../Client";
+import chalk from "chalk";
+import util from "util";
+
+import logger from "../util/logger";
+
+import { Pose } from "../Client";
 
 // For duck-typing the model
 export interface BackendModel {
@@ -61,6 +66,8 @@ export interface GameSettings {
     crewmateVision: number;
 }
 
+export type LogMode = "log"|"info"|"success"|"fatal"|"warn"|"error";
+
 // Actual backend class
 export abstract class BackendAdapter extends EventEmitter {
     abstract backendModel: BackendModel;
@@ -98,6 +105,11 @@ export abstract class BackendAdapter extends EventEmitter {
     }
     emitSettingsUpdate(settings: GameSettings) {
         this.emit(BackendEvent.SettingsUpdate, { settings });
+    }
+    log(mode: LogMode, format: string, ...params: any[]) {
+        const formatted = util.format(format, ...params);
+
+        logger[mode](chalk.grey("[" + this.backendModel.gameCode + "]"), formatted);
     }
 }
 

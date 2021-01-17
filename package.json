@@ -17,7 +17,11 @@
   },
   "dependencies": {
     "@microsoft/signalr": "^5.0.0",
-    "@skeldjs/client": "^2.1.7",
+    "@skeldjs/client": "^2.2.8",
+    "@skeldjs/common": "^2.2.8",
+    "@skeldjs/constant": "^2.2.7",
+    "@skeldjs/protocol": "^2.2.7",
+    "@skeldjs/types": "^2.2.7",
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "heroku-ssl-redirect": "^0.1.1",

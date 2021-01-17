@@ -5,9 +5,11 @@
       <v-form>
         <v-slider
           label="Falloff"
-          min="0.5"
+          min="4"
           max="10"
           step="0.1"
+          v-bind="attrs"
+          v-on="on"
           v-model="$store.state.options.falloff"
           :readonly="!$store.state.ishost"
           :disabled="$store.state.options.falloffVision || !$store.state.joinedRoom"
@@ -19,6 +21,12 @@
               class="mt-0 pt-0"
               type="number"
               style="width: 60px"
+              min="4"
+              max="10"
+              step="0.1"
+              :readonly="!$store.state.ishost"
+              :disabled="$store.state.options.falloffVision || !$store.state.joinedRoom"
+              @change="updateOptions"
             ></v-text-field>
           </template>
         </v-slider>
@@ -47,10 +55,10 @@
     </v-card>
     <br>
     <v-card class="pa-5">
-      <h3>Client options</h3>
+      <h3>Local options</h3>
       <v-form>
         <v-checkbox
-          label="Ghosts can hear everyone"
+          label="Hear everyone as a ghost"
           v-model="$store.state.clientOptions.omniscientGhosts"
           :disabled="!$store.state.joinedRoom"
         ></v-checkbox>
@@ -66,7 +74,7 @@ import ClientSocketEvents from '@/models/ClientSocketEvents'
 import { HostOptions as HostOptionsModel } from '@/models/RoomModel'
 
 @Component({})
-export default class HostOptions extends Vue {
+export default class ClientOptions extends Vue {
   updateOptions () {
     this.$socket.client.emit(
       ClientSocketEvents.SetOptions,

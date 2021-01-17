@@ -76,47 +76,51 @@
   resolved "https://registry.yarnpkg.com/@sindresorhus/is/-/is-0.14.0.tgz#9fb3a3cf3132328151f353de4632e01e52102bea"
   integrity sha512-9NET910DNaIPngYnLLPeg+Ogzqsi9uM4mSboU5y6p8S5DzMTVEsJZrawi+BoDNUVBa2DhJqQYUFvMDfgU062LQ==
 
-"@skeldjs/client@^2.1.7":
-  version "2.1.7"
-  resolved "https://registry.yarnpkg.com/@skeldjs/client/-/client-2.1.7.tgz#a2fc9b2e2f8b53f53731cd3f5d31a7957a76c05b"
-  integrity sha512-DgvOdnH6KxQxF4vNQJfJzqPCZCG1FxwnZKTq9YniN99XtHahM+2ZiQtm+iN2yLNTolCM6RaEmhGFeMR+MGVutw==
+"@skeldjs/client@^2.2.8":
+  version "2.2.8"
+  resolved "https://registry.yarnpkg.com/@skeldjs/client/-/client-2.2.8.tgz#7af4825c6ed84b1581c0feb624d70108da8a39fb"
+  integrity sha512-H0Ewe3wpMc6pQ7fRtNciyw/QAoNJiXcB4Gq+6iL9UHYPB6NDc0fJrYFDGmri/DGc48zZ9pfomUIIEFbJA3krmg==
   dependencies:
-    "@skeldjs/common" "^2.1.7"
-    "@skeldjs/protocol" "^2.1.3"
-    "@skeldjs/util" "^2.1.2"
+    "@skeldjs/common" "^2.2.8"
+    "@skeldjs/constant" "^2.2.7"
+    "@skeldjs/protocol" "^2.2.7"
+    "@skeldjs/util" "^2.2.7"
 
-"@skeldjs/common@^2.1.7":
-  version "2.1.7"
-  resolved "https://registry.yarnpkg.com/@skeldjs/common/-/common-2.1.7.tgz#69090cba6d4b9dc198ab8ed5d3786154451783a7"
-  integrity sha512-v4A1oy9urfwIwqFWOdnKXcnVQAf691YVsfj4v45QHQzJchamSmnPbv/eCCjqhaMYT0R/IwWc49SEPTLsvpFBkA==
+"@skeldjs/common@^2.2.8":
+  version "2.2.8"
+  resolved "https://registry.yarnpkg.com/@skeldjs/common/-/common-2.2.8.tgz#dfe4af31003262758b6faaa5aa8a226ce94e170f"
+  integrity sha512-gr0F2Cw6gBA9YFDQP/XSzT+vBRShGeBpVyz4xQrwBqmKCHFk5AXz2/VOmxHSNmHalq5zQe7LT4d3QLXZXg+iFg==
   dependencies:
-    "@skeldjs/constant" "^2.1.3"
-    "@skeldjs/protocol" "^2.1.3"
-    "@skeldjs/util" "^2.1.2"
+    "@skeldjs/constant" "^2.2.7"
+    "@skeldjs/protocol" "^2.2.7"
+    "@skeldjs/types" "^2.2.7"
+    "@skeldjs/util" "^2.2.7"
 
-"@skeldjs/constant@^2.1.3":
-  version "2.1.3"
-  resolved "https://registry.yarnpkg.com/@skeldjs/constant/-/constant-2.1.3.tgz#20790e7f1df46f096eb541742dbd68cf5ad39cc0"
-  integrity sha512-8lo1/sy+xrLyfWxunepSVyFrL4Z8kprnmdncJhsOkIOHN0u92YWenjwuPf1CgpcOOqv1UDK0JTFruGFMVkllEg==
-
-"@skeldjs/protocol@^2.1.3":
-  version "2.1.3"
-  resolved "https://registry.yarnpkg.com/@skeldjs/protocol/-/protocol-2.1.3.tgz#dfa111dcf7ea5e24ebefd075acc64847aa3c9dba"
-  integrity sha512-uHIIwuZoa6dTPoi6ph/gDsT70Te5pBQ0rcmuX70HiEqnAH1/28e/ywiee+Jb2GEnqDyYSCNCJgKxEV/u66CsFQ==
+"@skeldjs/constant@^2.2.7", "@skeldjs/constant@^2.2.8":
+  version "2.2.7"
+  resolved "https://registry.yarnpkg.com/@skeldjs/constant/-/constant-2.2.7.tgz#4863431be74c1881dd49753b1a5f7da9d8332aa0"
+  integrity sha512-QgfJIsDi25wuNtHkjZOxEkPC284dHXP1wZAxD1qsIxUaQVfUExZnSVTklX6SJI1ZkaPlrOPM3HKQGVxsTl8MxQ==
   dependencies:
-    "@skeldjs/constant" "^2.1.3"
-    "@skeldjs/types" "^2.1.2"
-    "@skeldjs/util" "^2.1.2"
+    "@skeldjs/util" "^2.2.7"
 
-"@skeldjs/types@^2.1.2":
-  version "2.1.2"
-  resolved "https://registry.yarnpkg.com/@skeldjs/types/-/types-2.1.2.tgz#1cafe44ab005d2be1c9c98c0cbde4fa45390cd7e"
-  integrity sha512-fZ+Fv+9CEFWJzEXHV7yckMyLZC+/O66xrFC9h8mzMTjpVXvSNgiaDntwmF69WCE/aymZuMa06ryUxaVWH4Q7hw==
+"@skeldjs/protocol@^2.2.7", "@skeldjs/protocol@^2.2.8":
+  version "2.2.7"
+  resolved "https://registry.yarnpkg.com/@skeldjs/protocol/-/protocol-2.2.7.tgz#bfb14d6694ebc9f6a7f25874278395d8858ae0db"
+  integrity sha512-Lkih/gKkG1990Conj6BOe66a3I/hLP66JRHn5AztYg8R+ADn9B77E1x+H5s0uJhxeZn7/64cNCgzY/imOFUOWw==
+  dependencies:
+    "@skeldjs/constant" "^2.2.7"
+    "@skeldjs/types" "^2.2.7"
+    "@skeldjs/util" "^2.2.7"
 
-"@skeldjs/util@^2.1.2":
-  version "2.1.2"
-  resolved "https://registry.yarnpkg.com/@skeldjs/util/-/util-2.1.2.tgz#03cc57c3692fead42f2d1da170dbc6ca107f17e8"
-  integrity sha512-zAU6nHIi9+6N3i7edvbVACkayilSt7FW+YTgTchKdqVhbUF1nfN+NZXGydSeR+s5ik4vTqE2woWiE8jHr+JZgg==
+"@skeldjs/types@^2.2.7", "@skeldjs/types@^2.2.8":
+  version "2.2.7"
+  resolved "https://registry.yarnpkg.com/@skeldjs/types/-/types-2.2.7.tgz#2070a2d3205099240df9e23edc1a483a698b06d2"
+  integrity sha512-SNS3DiU2eoKMbU1fyZvQ57kngv+sCI7ziBmEVeRLTzK+10gN9Z9tuD1dHY+rlHhFnbttaJq7NVCyzkdDbvrjyQ==
+
+"@skeldjs/util@^2.2.7":
+  version "2.2.7"
+  resolved "https://registry.yarnpkg.com/@skeldjs/util/-/util-2.2.7.tgz#e9c7e72dee5b7daf23b064534508e70f109f75cf"
+  integrity sha512-DzfWZ9v7bOP3q6PU0QHHFep0vKGIowi9ogu0iPt6gpyaGZLgeXqp2mxI4YpqqVFvAJEO5hPAXjtp9J5EKmOt0g==
 
 "@szmarczak/http-timer@^1.1.2":
   version "1.1.2"

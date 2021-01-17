@@ -96,14 +96,14 @@
     "@skeldjs/types" "^2.2.7"
     "@skeldjs/util" "^2.2.7"
 
-"@skeldjs/constant@^2.2.7", "@skeldjs/constant@^2.2.8":
+"@skeldjs/constant@^2.2.7":
   version "2.2.7"
   resolved "https://registry.yarnpkg.com/@skeldjs/constant/-/constant-2.2.7.tgz#4863431be74c1881dd49753b1a5f7da9d8332aa0"
   integrity sha512-QgfJIsDi25wuNtHkjZOxEkPC284dHXP1wZAxD1qsIxUaQVfUExZnSVTklX6SJI1ZkaPlrOPM3HKQGVxsTl8MxQ==
   dependencies:
     "@skeldjs/util" "^2.2.7"
 
-"@skeldjs/protocol@^2.2.7", "@skeldjs/protocol@^2.2.8":
+"@skeldjs/protocol@^2.2.7":
   version "2.2.7"
   resolved "https://registry.yarnpkg.com/@skeldjs/protocol/-/protocol-2.2.7.tgz#bfb14d6694ebc9f6a7f25874278395d8858ae0db"
   integrity sha512-Lkih/gKkG1990Conj6BOe66a3I/hLP66JRHn5AztYg8R+ADn9B77E1x+H5s0uJhxeZn7/64cNCgzY/imOFUOWw==
@@ -112,7 +112,7 @@
     "@skeldjs/types" "^2.2.7"
     "@skeldjs/util" "^2.2.7"
 
-"@skeldjs/types@^2.2.7", "@skeldjs/types@^2.2.8":
+"@skeldjs/types@^2.2.7":
   version "2.2.7"
   resolved "https://registry.yarnpkg.com/@skeldjs/types/-/types-2.2.7.tgz#2070a2d3205099240df9e23edc1a483a698b06d2"
   integrity sha512-SNS3DiU2eoKMbU1fyZvQ57kngv+sCI7ziBmEVeRLTzK+10gN9Z9tuD1dHY+rlHhFnbttaJq7NVCyzkdDbvrjyQ==
@@ -570,7 +570,7 @@ chalk@^3.0.0:
     ansi-styles "^4.1.0"
     supports-color "^7.1.0"
 
-chalk@^4.0.0:
+chalk@^4.0.0, chalk@^4.1.0:
   version "4.1.0"
   resolved "https://registry.yarnpkg.com/chalk/-/chalk-4.1.0.tgz#4e14870a618d9e2edd97dd8345fd9d9dc315646a"
   integrity sha512-qwx12AxXe2Q5xQ43Ac//I6v5aXTipYrSESdOgzrN+9XjgEpyjpKuvSGaN4qE93f7TQTlerQQ8S+EQ0EyDoVL1A==

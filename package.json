@@ -22,6 +22,7 @@
     "@skeldjs/constant": "^2.2.7",
     "@skeldjs/protocol": "^2.2.7",
     "@skeldjs/types": "^2.2.7",
+    "chalk": "^4.1.0",
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "heroku-ssl-redirect": "^0.1.1",

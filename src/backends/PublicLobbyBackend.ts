@@ -343,7 +343,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
 
     async initialSpawn(server: [string, number]): Promise<void> {
         this.client = new SkeldjsClient(GAME_VERSION);
-        this.log("info", "Joining for the first time with this.server %s:%i", this.server[0], this.server[1]);
+        this.log("info", "Joining for the first time with server %s:%i", this.server[0], this.server[1]);
         try {
             await this.client.connect(this.server[0], this.server[1]);
             await this.client.identify("auproxy");

@@ -2,7 +2,7 @@ import Vue from 'vue'
 import Vuex from 'vuex'
 import ClientSocketEvents from '@/models/ClientSocketEvents'
 import ClientModel, { MyMicModel, Pose } from '@/models/ClientModel'
-import { BackendModel, BackendType, RoomGroup } from '@/models/BackendModel'
+import { AllSpecificBackendModels, BackendModel, BackendType, RoomGroup } from '@/models/BackendModel'
 import { HostOptions } from '@/models/RoomModel'
 
 Vue.config.devtools = true
@@ -72,8 +72,11 @@ export default new Vuex.Store({
     setJoinedRoom (state: State, payload: boolean) {
       state.joinedRoom = payload
     },
-    setNameAndBackendModel (state: State, payload: { name: string; backendModel: BackendModel }) {
+    setNameAndBackendModel (state: State, payload: { name: string; backendModel: AllSpecificBackendModels }) {
       state.me.name = payload.name
+      if ('ip' in payload.backendModel) {
+        payload.backendModel.ip = decodeURIComponent(payload.backendModel.ip)
+      };
       state.backendModel = payload.backendModel
     },
     setHost (state: State, payload: { ishost: boolean }) {

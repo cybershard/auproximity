@@ -30,6 +30,9 @@ export enum PublicLobbyRegion {
   Europe,
   Asia
 }
+export interface GameSettings {
+  crewmateVision: number;
+}
 
 // Room groups
 export enum RoomGroup {

@@ -3,6 +3,7 @@ import Vuex from 'vuex'
 import ClientSocketEvents from '@/models/ClientSocketEvents'
 import ClientModel, { MyMicModel, Pose } from '@/models/ClientModel'
 import { BackendModel, BackendType, RoomGroup } from '@/models/BackendModel'
+import { HostOptions } from '@/models/RoomModel'
 
 Vue.config.devtools = true
 Vue.use(Vuex)
@@ -26,7 +27,14 @@ const state: State = {
     },
     group: RoomGroup.Spectator
   },
-  clients: []
+  clients: [],
+  options: {
+    falloff: 3.6,
+    falloffVision: false,
+    colliders: false,
+    paSystems: true
+  },
+  ishost: false
 }
 export default new Vuex.Store({
   state,
@@ -67,6 +75,12 @@ export default new Vuex.Store({
     setNameAndBackendModel (state: State, payload: { name: string; backendModel: BackendModel }) {
       state.me.name = payload.name
       state.backendModel = payload.backendModel
+    },
+    setHost (state: State, payload: { ishost: boolean }) {
+      state.ishost = payload.ishost
+    },
+    setOptions (state: State, payload: { options: HostOptions }) {
+      state.options = payload.options
     }
   },
   actions: {
@@ -124,6 +138,9 @@ export default new Vuex.Store({
       } else {
         commit('setGroupOf', { uuid: payload.uuid, group: payload.group })
       }
+    },
+    [`socket_${ClientSocketEvents.SetHost}`] ({ commit }, payload: { ishost: boolean }) {
+      commit('setHost', { ishost: payload.ishost })
     }
   },
   modules: {
@@ -138,4 +155,6 @@ export interface State {
   mic: MyMicModel;
   me: ClientModel;
   clients: ClientModel[];
+  options: HostOptions;
+  ishost: boolean;
 }

@@ -5,7 +5,7 @@
       <h4 v-if="$store.state.joinedRoom">Current Map: {{ this.colliderMap }}</h4>
     </div>
     <v-list v-if="$store.state.joinedRoom">
-      <MyClientListItem :client="me" :mic="mymic"/>
+      <MyClientListItem :client="me" :mic="mymic" />
       <ClientListItem v-for="client in clients" :key="client.uuid" :client="client" :streams="remoteStreams" />
     </v-list>
     <div>
@@ -34,9 +34,14 @@ import { colliderMaps } from '@/models/ColliderMaps'
 import intersect from 'path-intersection'
 import ClientListItem from '@/components/ClientListItem.vue'
 import MyClientListItem from '@/components/MyClientListItem.vue'
+import HostOptions from '@/components/HostOptions.vue'
+import { GameSettings } from '@/models/RoomModel'
+
+const AudioContext = window.AudioContext || // Default
+  (window as any).webkitAudioContext // Safari and old versions of Chrome
 
 @Component({
-  components: { MyClientListItem, ClientListItem },
+  components: { MyClientListItem, ClientListItem, HostOptions },
   directives: {
     audio (el: HTMLElement, { value }) {
       const elem: HTMLAudioElement = el as HTMLAudioElement
@@ -54,11 +59,13 @@ export default class ServerDisplayer extends Vue {
 
   colliderMap: 'Skeld' | 'Mira HQ' | 'Polus' = 'Skeld';
 
-  LERP_VALUE = 2.7;
-
   peer?: Peer;
   remotectx?: AudioContext;
   remoteStreams: RemoteStreamModel[] = [];
+
+  settings: GameSettings = {
+    crewmateVision: 2.7
+  };
 
   /**
    * Starts a PeerJS connection, handles answering calls and auto-reconnects to PeerJS and remote peer MediaStreams on error
@@ -134,14 +141,19 @@ export default class ServerDisplayer extends Vue {
         const source = this.remotectx.createMediaStreamSource(new MediaStream([remoteStream.getAudioTracks()[0]]))
         const gainNode = this.remotectx.createGain()
         const volumeNode = this.remotectx.createGain()
+        const pannerNode = this.remotectx.createPanner()
 
         source.connect(gainNode)
         gainNode.connect(volumeNode)
-        volumeNode.connect(this.remotectx.destination)
+        volumeNode.connect(pannerNode)
+        pannerNode.connect(this.remotectx.destination)
 
         gainNode.gain.value = 1
         volumeNode.gain.value = 1
-        this.remoteStreams.push({ uuid: call.peer, source, gainNode, volumeNode, remoteStream })
+        pannerNode.maxDistance = 1
+        pannerNode.rolloffFactor = 0 // Prevents the pannerNode from adjusting the volume (this is being done manually in the gainNode)
+
+        this.remoteStreams.push({ uuid: call.peer, source, gainNode, volumeNode, pannerNode, remoteStream })
         resolve()
       })
     })
@@ -155,6 +167,7 @@ export default class ServerDisplayer extends Vue {
       s.source.disconnect()
       s.gainNode.disconnect()
       s.volumeNode.disconnect()
+      s.pannerNode.disconnect()
     })
     await this.remotectx?.close()
     this.remoteStreams = []
@@ -201,6 +214,7 @@ export default class ServerDisplayer extends Vue {
         remote.source.disconnect()
         remote.gainNode.disconnect()
         remote.volumeNode.disconnect()
+        remote.pannerNode.disconnect()
         return false
       }
       return true
@@ -220,6 +234,7 @@ export default class ServerDisplayer extends Vue {
       if (payload.uuid === this.$store.state.me.uuid) {
         this.remoteStreams.forEach(s => {
           s.gainNode.gain.value = 1
+          s.pannerNode.setPosition(0, 0, 0)
         })
       } else if (this.$store.state.me.group === RoomGroup.Main) {
         const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
@@ -229,6 +244,7 @@ export default class ServerDisplayer extends Vue {
         const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
         if (!stream) return
         stream.gainNode.gain.value = 1
+        stream.pannerNode.setPosition(0, 0, 0)
       } else if (this.$store.state.me.group === RoomGroup.Muted) {
         const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
         if (!stream) return
@@ -263,6 +279,7 @@ export default class ServerDisplayer extends Vue {
           const client: ClientModel = this.$store.state.clients.find((c: ClientModel) => c.uuid === s.uuid)
           if (client && client.group === RoomGroup.Main) {
             s.gainNode.gain.value = 1
+            s.pannerNode.setPosition(0, 0, 0)
           }
         })
       } else {
@@ -280,15 +297,24 @@ export default class ServerDisplayer extends Vue {
     }
   }
 
-  recalcVolumeForRemoteStream (stream: { uuid: string; gainNode: GainNode }) {
+  @Socket(ClientSocketEvents.SetSettings)
+  onSetSettings (payload: { settings: GameSettings }) {
+    this.settings = payload.settings
+  }
+
+  recalcVolumeForRemoteStream (stream: { uuid: string; gainNode: GainNode; pannerNode: PannerNode }) {
     const client: ClientModel = this.$store.state.clients.find((c: ClientModel) => c.uuid === stream.uuid)
     if (!client) return
     // Only change if they are in RoomGroup.Main
     if (client.group === RoomGroup.Main) {
-      if (this.poseCollide(this.$store.state.me.pose, client.pose)) {
+      const p1 = this.$store.state.me.pose
+      const p2 = client.pose
+
+      if (this.poseCollide(p1, p2) && this.$store.state.options.colliders) {
         stream.gainNode.gain.value = 0
       } else {
-        stream.gainNode.gain.value = this.lerp(this.hypotPose(this.$store.state.me.pose, client.pose))
+        stream.gainNode.gain.value = this.lerp(this.hypotPose(p1, p2))
+        stream.pannerNode.setPosition(p2.x - p1.x, p2.y - p1.y, 1)
       }
     } else if (client.group === RoomGroup.Spectator || client.group === RoomGroup.Muted) {
       // If they are spectator or muted
@@ -333,6 +359,10 @@ export default class ServerDisplayer extends Vue {
 
   get mymic () {
     return this.$store.state.mic
+  }
+
+  get LERP_VALUE () {
+    return this.$store.state.options.falloffVision ? this.settings.crewmateVision : this.$store.state.options.falloff
   }
 }
 </script>

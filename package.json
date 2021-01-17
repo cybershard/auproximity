@@ -1,6 +1,6 @@
 {
   "name": "auproximity-server",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Proximity Voice Server",
   "author": "cybershard",
   "contributors": [
@@ -13,7 +13,7 @@
     "build:docker": "docker build -t auproxy-backend .",
     "start": "node ./dist/src/main.js",
     "lint": "eslint ./src/**/*.ts --fix",
-    "heroku-postbuild": "yarn build && YARN_PRODUCTION=false yarn --cwd auproximity-webui install && yarn --cwd auproximity-webui build && mkdir dist/src/dist && cp -r auproximity-webui/dist dist/src"
+    "heroku-postbuild": "yarn build && YARN_PRODUCTION=false yarn --cwd auproximity-webui install && yarn --cwd auproximity-webui build && mkdir -p dist/src/dist && cp -r auproximity-webui/dist dist/src"
   },
   "dependencies": {
     "@microsoft/signalr": "^5.0.0",
@@ -21,7 +21,7 @@
     "express": "^4.17.1",
     "heroku-ssl-redirect": "^0.1.1",
     "lodash": "^4.17.20",
-    "peer": "^0.5.3",
+    "peer": "^0.6.1",
     "socket.io": "^3.0.1",
     "tslib": "^2.0.3",
     "uuid": "^8.3.1"

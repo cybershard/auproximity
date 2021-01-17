@@ -2,6 +2,8 @@ import {
     BackendAdapter, BackendEvent,
     BackendModel,
     BackendType,
+    GameSettings,
+    HostOptions,
     ImpostorBackendModel,
     MapIdModel,
     PublicLobbyBackendModel, RoomGroup
@@ -20,6 +22,13 @@ export default class Room {
     public clientRoomGroupMap = new Map<string, RoomGroup>();
 
     map: MapIdModel;
+    hostname: string;
+    options: HostOptions = {
+        falloff: 2.7,
+        falloffVision: false,
+        colliders: true,
+        paSystems: true
+    };
 
     constructor(backendModel: BackendModel) {
         this.backendModel = backendModel;
@@ -95,6 +104,18 @@ export default class Room {
 
             await this.destroy();
         });
+        this.backendAdapter.on(BackendEvent.HostChange, async (payload: { hostname: string }) => {
+            this.hostname = payload.hostname;
+
+            this.members.forEach(c => {
+                c.setHost(c.name === this.hostname);
+            });
+        });
+        this.backendAdapter.on(BackendEvent.SettingsUpdate, async (payload: { settings: GameSettings }) => {
+            this.members.forEach(c => {
+                c.sendSettings(payload.settings);
+            });
+        });
         this.backendAdapter.initialize();
     }
 
@@ -114,6 +135,16 @@ export default class Room {
             group: c.group
         })));
         this.members.push(client);
+
+        client.sendOptions(this.options);
+        client.setHost(client.name === this.hostname);
+    }
+    setOptions(options: HostOptions, host: boolean = false) {
+        this.options = options;
+
+        this.members.forEach(c => {
+            if (c.name !== this.hostname || host) c.sendOptions(options);
+        });
     }
     async removeClient(client: Client): Promise<void> {
         this.members = this.members.filter(c => c.uuid !== client.uuid);

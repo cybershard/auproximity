@@ -11,7 +11,7 @@
     "serve": "nodemon ./src/main.ts",
     "build": "cross-env NODE_ENV=production tsc -p ./",
     "build:docker": "docker build -t auproxy-backend .",
-    "start": "node ./dist/src/main.js",
+    "start": "node ./dist/main.js",
     "lint": "eslint ./src/**/*.ts --fix",
     "heroku-postbuild": "yarn build && YARN_PRODUCTION=false yarn --cwd auproximity-webui install && yarn --cwd auproximity-webui build && mkdir -p dist/src/dist && cp -r auproximity-webui/dist dist/src"
   },

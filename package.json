@@ -13,7 +13,7 @@
     "build:docker": "docker build -t auproxy-backend .",
     "start": "node ./dist/main.js",
     "lint": "eslint ./src/**/*.ts --fix",
-    "heroku-postbuild": "yarn build && YARN_PRODUCTION=false yarn --cwd auproximity-webui install && yarn --cwd auproximity-webui build && mkdir -p dist/src/dist && cp -r auproximity-webui/dist dist/src"
+    "heroku-postbuild": "yarn build && YARN_PRODUCTION=false yarn --cwd auproximity-webui install && yarn --cwd auproximity-webui build && mkdir -p dist/src/dist && cp -r auproximity-webui/dist dist"
   },
   "dependencies": {
     "@microsoft/signalr": "^5.0.0",

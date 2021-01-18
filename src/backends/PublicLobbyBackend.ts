@@ -408,7 +408,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
 
         const settings = await this.awaitSettings(this.client);
         this.currentMap = settings.map;
-        this.emitMapChange(MapID[MapID[settings.map]]);
+        this.emitMapChange(settings.map);
         
         if (room.host && room.host.data) {
             this.emitHostChange(room.host.data.name);

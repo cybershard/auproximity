@@ -2,10 +2,10 @@
   <v-card class="pa-5">
     <div class="text-center">
       <h2>{{ title }}</h2>
-      <h4 v-if="$store.state.joinedRoom">Current Map: {{ this.colliderMap }}</h4>
+      <h4 v-if="$store.state.joinedRoom">Current Map: {{ ["The Skeld", "Mira HQ", "Polus", "The Skeld April Fools", "Airship"][this.colliderMap] }}</h4>
     </div>
     <v-list v-if="$store.state.joinedRoom">
-      <MyClientListItem :client="me" :mic="mymic" />
+      <MyClientListItem :client="$store.state.me" :mic="mymic" />
       <ClientListItem v-for="client in clients" :key="client.uuid" :client="client" :streams="remoteStreams" />
     </v-list>
     <div>
@@ -25,16 +25,20 @@
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
 import { Socket } from 'vue-socket.io-extended'
-import ClientSocketEvents from '@/models/ClientSocketEvents'
+import { MapID } from '@skeldjs/constant'
 import Peer from 'peerjs'
+import intersect from 'path-intersection'
+
 import consts from '@/consts'
+import { ClientSocketEvents } from '@/models/ClientSocketEvents'
 import ClientModel, { Pose, RemoteStreamModel } from '@/models/ClientModel'
 import { RoomGroup } from '@/models/BackendModel'
-import { colliderMaps } from '@/models/ColliderMaps'
-import intersect from 'path-intersection'
+import { colliderMaps } from '@/lib/ColliderMaps'
 import ClientListItem from '@/components/ClientListItem.vue'
 import MyClientListItem from '@/components/MyClientListItem.vue'
 import { GameSettings } from '@/models/RoomModel'
+import { PlayerFlags } from '@/models/PlayerFlags'
+import { getClosestCamera } from '@/lib/CameraPositions'
 
 @Component({
   components: { MyClientListItem, ClientListItem },
@@ -53,14 +57,14 @@ export default class ServerDisplayer extends Vue {
   showSnackbar = false;
   snackbarMessage = '';
 
-  colliderMap: 'Skeld' | 'Mira HQ' | 'Polus' = 'Skeld';
+  colliderMap: MapID = MapID.TheSkeld;
 
   peer?: Peer;
   remotectx?: AudioContext;
   remoteStreams: RemoteStreamModel[] = [];
 
   settings: GameSettings = {
-    crewmateVision: 2.7
+    crewmateVision: 1
   };
 
   /**
@@ -218,10 +222,8 @@ export default class ServerDisplayer extends Vue {
   }
 
   @Socket(ClientSocketEvents.SetMap)
-  onSetMap (payload: { map: number }) {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-    // @ts-ignore
-    this.colliderMap = ['Skeld', 'Mira HQ', 'Polus'][payload.map] || 'Skeld'
+  onSetMap (payload: { map: MapID }) {
+    this.colliderMap = payload.map
   }
 
   @Socket(ClientSocketEvents.SetGroup)
@@ -308,17 +310,24 @@ export default class ServerDisplayer extends Vue {
       stream.gainNode.gain.value = 1
       stream.pannerNode.setPosition(0, 0, 0)
     } else if (client.group !== RoomGroup.Spectator || this.$store.state.me.group === RoomGroup.Spectator) {
-      const p1 = this.$store.state.me.pose
       const p2 = client.pose
+      const p1 = (this.$store.state.me.flags & PlayerFlags.PA)
+        ? getClosestCamera(p2, this.colliderMap) || this.$store.state.me.pose
+        : this.$store.state.me.pose
 
-      if (this.poseCollide(p1, p2) && this.$store.state.options.colliders) {
-        stream.gainNode.gain.value = 0
-      } else {
-        stream.gainNode.gain.value = this.lerp(this.hypotPose(p1, p2))
-        stream.pannerNode.setPosition(p2.x - p1.x, p2.y - p1.y, 1)
-      }
+      this.setGainAndPan(client, stream, p1, p2)
     } else {
       stream.gainNode.gain.value = 0
+    }
+  }
+
+  setGainAndPan (client: ClientModel, stream: { uuid: string; gainNode: GainNode; pannerNode: PannerNode }, p1: { x: number; y: number }, p2: { x: number; y: number }) {
+    if (this.poseCollide(p1, p2) && this.$store.state.options.colliders) {
+      stream.gainNode.gain.value = 0
+      stream.pannerNode.setPosition(0, 0, 0)
+    } else {
+      stream.gainNode.gain.value = this.lerp(this.hypotPose(p1, p2))
+      stream.pannerNode.setPosition(p2.x - p1.x, p2.y - p1.y, 1)
     }
   }
 

@@ -1,19 +1,31 @@
-import {BackendAdapter, BackendModel, BackendType} from "../types/Backend";
+import util from "util";
+import chalk from "chalk";
+
+import logger from "../util/logger";
+
+import { BackendType, BackendModel } from "../types/models/Backends";
+
+import { BackendAdapter, LogMode } from "./Backend";
 
 export default class NoOpBackend extends BackendAdapter {
     backendModel: BackendModel;
+
     constructor() {
         super();
+
         this.backendModel = {
             backendType: BackendType.NoOp,
             gameCode: "NOPNOP"
         };
+
+        this.gameID = this.backendModel.gameCode;
     }
 
     initialize(): void {
-        console.log("Initialized NoOp Backend");
+        this.log("info", "Initialized NoOp backend.");
     }
+
     destroy(): void {
-        console.log("Destroying NoOp Backend");
+        this.log("info", "Destroying NoOp backend.");
     }
 }

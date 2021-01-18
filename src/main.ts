@@ -1,19 +1,25 @@
-import socketio, {Socket} from "socket.io";
+import socketio, { Socket } from "socket.io";
 
-import Client from "./Client";
-import {ExpressPeerServer} from "peer";
-import Room from "./Room";
+import { ExpressPeerServer } from "peer";
+import { v4 } from "uuid";
+
 import express from "express";
 import http from "http";
 import path from "path";
 import sslRedirect from "heroku-ssl-redirect";
-import {v4} from "uuid";
+
+import { AUProximityState } from "./types/models/AUProximityState";
+
+import Client from "./Client";
+import Room from "./Room";
 
 const app = express();
+
 app.use(sslRedirect());
 app.use(express.static(path.join(__dirname, "dist")));
 
 const server = http.createServer(app);
+
 const io = new socketio.Server(server, process.env.NODE_ENV === "production" ? {} : {
     cors: { origin: "http://localhost:8080" }
 });
@@ -30,11 +36,7 @@ app.use("/peerjs", ExpressPeerServer({
     }
 }));
 
-
-export const state: {
-    allClients: Client[];
-    allRooms: Room[];
-} = {
+export const state: AUProximityState = {
     allClients: [],
     allRooms: []
 };
@@ -49,7 +51,6 @@ io.on("connection", (socket: Socket) => {
 app.all("*", (req, res) => {
     res.sendFile(path.join(__dirname, "dist", "index.html"));
 });
-
 
 const port = process.env.PORT || 8079;
 server.listen(port, () => {

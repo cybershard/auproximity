@@ -1,22 +1,27 @@
-import {
-    BackendAdapter,
-    BackendEvent,
-    BackendModel,
-    BackendType,
-    GameSettings,
-    HostOptions,
-    ImpostorBackendModel,
-    MapIdModel,
-    PublicLobbyBackendModel,
-    RoomGroup
-} from "./types/Backend";
-import Client, {Pose, PlayerModel} from "./Client";
+import { ColorID, MapID } from "@skeldjs/constant";
 
-import {ColorID} from "@skeldjs/constant";
+import { BackendEvent } from "./types/enums/BackendEvent";
+import { RoomGroup } from "./types/enums/RoomGroup";
+
+import { GameSettings, HostOptions } from "./types/models/ClientOptions";
+
+import {
+    BackendType,
+    BackendModel,
+    ImpostorBackendModel,
+    PublicLobbyBackendModel
+} from "./types/models/Backends";
+
+import { BackendAdapter } from "./backends/Backend";
+
 import ImpostorBackend from "./backends/ImpostorBackend";
 import NoOpBackend from "./backends/NoOpBackend";
 import PublicLobbyBackend from "./backends/PublicLobbyBackend";
-import {state} from "./main";
+
+import Client, { Pose, PlayerModel } from "./Client";
+import { PlayerFlags } from "./types/enums/PlayerFlags";
+
+import { state } from "./main";
 
 export default class Room {
     public backendModel: BackendModel;
@@ -25,10 +30,10 @@ export default class Room {
 
     public clientRoomGroupMap = new Map<string, RoomGroup>();
 
-    map: MapIdModel;
+    map: MapID;
     hostname: string;
     options: HostOptions = {
-        falloff: 2.7,
+        falloff: 4.5,
         falloffVision: false,
         colliders: true,
         paSystems: true
@@ -41,7 +46,6 @@ export default class Room {
         this.initializeBackend();
     }
 
-    // Factory function
     private static buildBackendAdapter(backendModel: BackendModel): BackendAdapter {
         if (backendModel.backendType === BackendType.PublicLobby) {
             return new PublicLobbyBackend(backendModel as PublicLobbyBackendModel);
@@ -51,14 +55,16 @@ export default class Room {
             return new NoOpBackend();
         }
     }
+
     private initializeBackend() {
-        this.backendAdapter.on(BackendEvent.MapChange, (payload: { map: MapIdModel }) => {
+        this.backendAdapter.on(BackendEvent.MapChange, (payload: { map: MapID }) => {
             this.map = payload.map;
 
             this.members.forEach(c => {
                 c.setMap(payload.map);
             });
         });
+
         this.backendAdapter.on(BackendEvent.PlayerPose, (payload: { name: string; pose: Pose; }) => {
             const client = this.members.find(c => c.name === payload.name);
             if (client) {
@@ -68,6 +74,7 @@ export default class Room {
                 });
             }
         });
+
         this.backendAdapter.on(BackendEvent.PlayerColor, (payload: { name: string; color: ColorID }) => {
             const client = this.members.find(c => c.name === payload.name);
 
@@ -81,17 +88,19 @@ export default class Room {
 
             if (client) {
                 client.color = payload.color;
-                
+
                 this.members.forEach(c => {
                     c.setColorOf(client.uuid, client.color);
                 });
             }
         });
+
         this.backendAdapter.on(BackendEvent.AllPlayerPoses, (payload: { pose: Pose }) => {
             this.members.forEach(client => {
                 this.members.forEach(c => c.setPoseOf(client.uuid, payload.pose));
             });
         });
+
         this.backendAdapter.on(BackendEvent.PlayerJoinGroup, (payload: { name: string; group: RoomGroup }) => {
 
             // store the state of this client <-> roomGroup in the room
@@ -105,6 +114,7 @@ export default class Room {
                 });
             }
         });
+
         this.backendAdapter.on(BackendEvent.AllPlayerJoinGroups, (payload: { group: RoomGroup }) => {
             this.members.forEach(client => {
                 // store the state of this client <-> roomGroup in the room
@@ -114,6 +124,7 @@ export default class Room {
                 this.members.forEach(c => c.setGroupOf(client.uuid, payload.group));
             });
         });
+
         this.backendAdapter.on(BackendEvent.PlayerFromJoinGroup, (payload: { from: RoomGroup; to: RoomGroup }) => {
             const fromClients = this.members.filter(c => c.group === payload.from);
             this.members.forEach(c => {
@@ -123,11 +134,7 @@ export default class Room {
                 });
             });
         });
-        this.backendAdapter.on(BackendEvent.Error, async (payload: { err: string }) => {
-            this.members.forEach(c => c.sendError(payload.err));
 
-            await this.destroy();
-        });
         this.backendAdapter.on(BackendEvent.HostChange, async (payload: { hostname: string }) => {
             this.hostname = payload.hostname;
 
@@ -135,17 +142,43 @@ export default class Room {
                 c.setHost(c.name === this.hostname);
             });
         });
+
         this.backendAdapter.on(BackendEvent.SettingsUpdate, async (payload: { settings: GameSettings }) => {
             this.members.forEach(c => {
                 c.sendSettings(payload.settings);
             });
         });
+        
+        this.backendAdapter.on(BackendEvent.PlayerFlags, async (payload: { name: string; flags: PlayerFlags; set: boolean}) => {
+            const client = this.members.find(c => c.name === payload.name);
+
+            if (client) {
+                if (payload.set) {
+                    client.flags |= payload.flags;
+                } else {
+                    client.flags &= ~payload.flags;
+                }
+
+                this.members.forEach(c => {
+                    if (payload.set) {
+                        c.setFlagsOf(client.uuid, payload.flags);
+                    } else {
+                        c.unsetFlagsOf(client.uuid, payload.flags);
+                    }
+                });
+            }
+        });
+
+        this.backendAdapter.on(BackendEvent.Error, async (payload: { err: string }) => {
+            this.members.forEach(c => c.sendError(payload.err));
+
+            await this.destroy();
+        });
+        
         this.backendAdapter.initialize();
     }
 
-    // Public methods
     addClient(client: Client): void {
-        // restore roomgroup for a client if it exists
         if (this.clientRoomGroupMap.has(client.name)) {
             client.setGroupOf(client.uuid, this.clientRoomGroupMap.get(client.name));
         }
@@ -153,6 +186,7 @@ export default class Room {
 
         this.members.forEach(c => {
             c.addClient(client.uuid, client.name, client.pose, client.group, client.color);
+
             if (this.players.get(client.name)) c.setColorOf(client.uuid, this.players.get(client.name).color);
         });
 
@@ -161,13 +195,16 @@ export default class Room {
             name: c.name,
             pose: c.pose,
             group: c.group,
-            color: c.color
+            color: c.color,
+            flags: c.flags
         })));
+
         this.members.push(client);
 
         client.sendOptions(this.options);
         client.setHost(client.name === this.hostname);
     }
+
     setOptions(options: HostOptions, host: boolean = false) {
         this.options = options;
 
@@ -175,6 +212,7 @@ export default class Room {
             if (c.name !== this.hostname || host) c.sendOptions(options);
         });
     }
+
     async removeClient(client: Client): Promise<void> {
         this.members = this.members.filter(c => c.uuid !== client.uuid);
         this.members.forEach(c => c.removeClient(client.uuid));
@@ -190,6 +228,7 @@ export default class Room {
             return;
         }
         await this.backendAdapter.destroy();
+
         state.allRooms = state.allRooms.filter(room => room !== this);
     }
 }

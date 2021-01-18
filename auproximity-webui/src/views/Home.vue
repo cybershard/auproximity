@@ -28,7 +28,7 @@
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
 import { BackendModel } from '@/models/BackendModel'
-import ClientSocketEvents from '@/models/ClientSocketEvents'
+import { ClientSocketEvents } from '@/models/ClientSocketEvents'
 import ServerConnector from '@/components/ServerConnector.vue'
 import ServerDisplayer from '@/components/ServerDisplayer.vue'
 import Tutorial from '@/components/Tutorial.vue'

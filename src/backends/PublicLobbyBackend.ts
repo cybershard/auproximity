@@ -1,10 +1,5 @@
-import {
-    BackendAdapter,
-    MapIdModel,
-    PublicLobbyBackendModel,
-    PublicLobbyRegion,
-    RoomGroup
-} from "../types/Backend";
+import util from "util";
+import chalk from "chalk";
 
 import { SkeldjsClient } from "@skeldjs/client"
 
@@ -16,7 +11,7 @@ import {
     MessageTag,
     RpcTag,
     SystemType
-} from "@skeldjs/constant"
+} from "@skeldjs/constant";
 
 import {
     GameOptions,
@@ -25,11 +20,11 @@ import {
     RpcMessage,
     GameDataPayload,
     SyncSettingsRpc
-} from "@skeldjs/protocol"
+} from "@skeldjs/protocol";
 
 import {
     PlayerGameData
-} from "@skeldjs/types"
+} from "@skeldjs/types";
 
 import {
     Networkable,
@@ -38,18 +33,27 @@ import {
     Room,
     PlayerData,
     CustomNetworkTransform,
-    GameData
-} from "@skeldjs/common"
+    GameData,
+    SecurityCameraSystem
+} from "@skeldjs/common";
+
+import logger from "../util/logger";
+
+import { PublicLobbyBackendModel } from "../types/models/Backends";
+import { PublicLobbyRegion } from "../types/models/PublicLobbyRegion";
+
+import { RoomGroup } from "../types/enums/RoomGroup";
+
+import {
+    BackendAdapter,
+    LogMode
+} from "./Backend";
+import { PlayerFlags } from "../types/enums/PlayerFlags";
 
 const GAME_VERSION = "2020.11.17.0";
 
 export default class PublicLobbyBackend extends BackendAdapter {
     backendModel: PublicLobbyBackendModel;
-
-    constructor(backendModel: PublicLobbyBackendModel) {
-        super();
-        this.backendModel = backendModel;
-    }
 
     client: SkeldjsClient;
     currentMap: MapID;
@@ -59,6 +63,19 @@ export default class PublicLobbyBackend extends BackendAdapter {
     players_cache: Map<number, PlayerData>;
     components_cache: Map<number, Networkable>;
     global_cache: Networkable[];
+
+    constructor(backendModel: PublicLobbyBackendModel) {
+        super();
+        
+        this.backendModel = backendModel;
+        this.gameID = this.backendModel.gameCode;
+    }
+
+    log(mode: LogMode, format: string, ...params: any[]) {
+        const formatted = util.format(format, ...params);
+
+        logger[mode](chalk.grey("[" + this.backendModel.gameCode + "]"), formatted);
+    }
 
     async doJoin(doSpawn = false, max_attempts = 5, attempt = 0) {
         if (attempt > max_attempts) {
@@ -107,7 +124,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
         switch (payload.tag) {
         case PayloadTag.JoinGame:
             if (payload.bound == "client" && !payload.error) {
-                if (this.client.room.host && this.client.room.host.data) {
+                if (this.client.room && this.client.room.host && this.client.room.host.data) {
                     this.emitHostChange(this.client.room.host.data.name);
                 }
             }
@@ -124,15 +141,21 @@ export default class PublicLobbyBackend extends BackendAdapter {
             await this.doJoin();
             break;
         case PayloadTag.RemovePlayer:
-            this.log("log", "Removed player " + payload.clientid + ".");
+            this.log("log", "Player " + payload.clientid + " was removed.");
 
             if (this.client.room.amhost) {
-                this.log("warn", "Became host, disconnecting and re-joining..")
-                await this.client.disconnect();
-                await this.doJoin();
+                if (this.client.room.players.size === 1) {
+                    this.log("warn", "Every player left, disconnecting.");
+                    await this.client.disconnect();
+                    return;
+                } else {
+                    this.log("warn", "Became host, disconnecting and re-joining..")
+                    await this.client.disconnect();
+                    await this.doJoin();
+                }
             }
             
-            if (this.client.room.host && this.client.room.host.data) {
+            if (this.client.room && this.client.room.host && this.client.room.host.data) {
                 this.log("info", "Host changed to " + this.client.room.host.data.name);
                 this.emitHostChange(this.client.room.host.data.name);
             }
@@ -143,15 +166,18 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 this.handleGameDataMessage(message);
             });
             break;
+        case PayloadTag.WaitForHost:
+            this.log("info", "Waiting for host to re-connect..");
+            break;
         }
     }
 
     async handleGameDataMessage(message: GameDataMessage) {
         switch (message.tag) {
         case MessageTag.Data:
-            if (message.netid === this.client.room.shipstatus?.netid) {
+            if (message.netid === this.client.room?.shipstatus?.netid) {
                 if (this.currentMap === MapID.TheSkeld || this.currentMap === MapID.Polus) {
-                    const comms = this.client.room.shipstatus?.systems?.[SystemType.Communications] as HudOverrideSystem;
+                    const comms = this.client.room?.shipstatus?.systems?.[SystemType.Communications] as HudOverrideSystem;
                     
                     if (comms) {
                         if (comms.sabotaged) {
@@ -160,8 +186,18 @@ export default class PublicLobbyBackend extends BackendAdapter {
                             this.emitPlayerFromJoinGroup(RoomGroup.Muted, RoomGroup.Main);
                         }
                     }
+
+                    const security = this.client.room?.shipstatus?.systems?.[SystemType.Security] as SecurityCameraSystem;
+
+                    if (security) {
+                        for (let [ clientId, player ] of this.client.room.players) {
+                            if (player && player.data) {
+                                this.emitPlayerFlags(player.data.name, PlayerFlags.PA, security.players.has(player));
+                            }
+                        }
+                    }
                 } else if (this.currentMap === MapID.MiraHQ) {
-                    const comms = this.client.room.shipstatus?.systems?.[SystemType.Communications] as unknown as HqHudSystem;
+                    const comms = this.client.room?.shipstatus?.systems?.[SystemType.Communications] as unknown as HqHudSystem;
                     
                     if (comms) {
                         if (comms.completed.length === 0) {
@@ -372,7 +408,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
 
         const settings = await this.awaitSettings(this.client);
         this.currentMap = settings.map;
-        this.emitMapChange(MapIdModel[MapID[settings.map]]);
+        this.emitMapChange(MapID[MapID[settings.map]]);
         
         if (room.host && room.host.data) {
             this.emitHostChange(room.host.data.name);

@@ -1,4 +1,5 @@
-import { RoomGroup } from '@/models/BackendModel'
+import { RoomGroup } from './BackendModel'
+import { PlayerFlags } from './PlayerFlags'
 
 export default interface ClientModel {
   uuid: string;
@@ -6,6 +7,7 @@ export default interface ClientModel {
   pose: Pose;
   group: RoomGroup;
   color: ColorID;
+  flags: PlayerFlags;
 }
 
 export interface Pose {

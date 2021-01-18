@@ -2,10 +2,11 @@
   <div>
     <v-card class="pa-5">
       <h3>Host options</h3>
+      <br>
       <v-form>
         <v-slider
-          label="Falloff"
-          min="4"
+          label="Voice dropoff"
+          min="2.5"
           max="10"
           step="0.1"
           v-bind="attrs"
@@ -21,7 +22,7 @@
               class="mt-0 pt-0"
               type="number"
               style="width: 60px"
-              min="4"
+              min="2.5"
               max="10"
               step="0.1"
               :readonly="!$store.state.ishost"
@@ -31,21 +32,21 @@
           </template>
         </v-slider>
         <v-checkbox
-          label="Vision falloff"
+          label="Only hear people in vision"
           v-model="$store.state.options.falloffVision"
           :readonly="!$store.state.ishost"
           :disabled="!$store.state.joinedRoom"
           @change="updateOptions"
         ></v-checkbox>
         <v-checkbox
-          label="Wall collision"
+          label="Walls block voice"
           v-model="$store.state.options.colliders"
           :readonly="!$store.state.ishost"
           :disabled="!$store.state.joinedRoom"
           @change="updateOptions"
         ></v-checkbox>
         <v-checkbox
-          label="PA System"
+          label="Hear through cameras"
           v-model="$store.state.options.paSystems"
           :readonly="!$store.state.ishost"
           :disabled="!$store.state.joinedRoom"
@@ -70,8 +71,8 @@
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
 import { Socket } from 'vue-socket.io-extended'
-import ClientSocketEvents from '@/models/ClientSocketEvents'
-import { HostOptions as HostOptionsModel } from '@/models/RoomModel'
+import { ClientSocketEvents } from '@/models/ClientSocketEvents'
+import { HostOptions } from '@/models/RoomModel'
 
 @Component({})
 export default class ClientOptions extends Vue {
@@ -83,7 +84,7 @@ export default class ClientOptions extends Vue {
   }
 
   @Socket(ClientSocketEvents.SetOptions)
-  onSetPose (payload: { options: HostOptionsModel }) {
+  onSetPose (payload: { options: HostOptions }) {
     this.$store.state.options = payload.options
   }
 }

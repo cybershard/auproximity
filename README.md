@@ -8,7 +8,7 @@ I have an open instance hosted on [Heroku](https://auproxy.herokuapp.com).
 
 This software should be used for personal use on public lobbies. Anyone that wants to
 have a custom solution, private server, or other commercial use for this software should 
-send a direct message to `Cybershard#3935` on Discord. This software comes with NO warranty.
+send a direct message to `Cybershard#0001` on Discord. This software comes with NO warranty.
 
 ## Features
 - The software can connect to a public game to host proximity voice services

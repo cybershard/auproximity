@@ -1,7 +1,8 @@
 import { BackendModel, BackendType, RoomGroup } from '@/models/BackendModel'
 import ClientModel, { ColorID, MyMicModel, Pose } from '@/models/ClientModel'
 
-import ClientSocketEvents from '@/models/ClientSocketEvents'
+import { ClientSocketEvents } from '@/models/ClientSocketEvents'
+import { PlayerFlags } from '@/models/PlayerFlags'
 import { HostOptions, ClientOptions } from '@/models/RoomModel'
 import Vue from 'vue'
 import Vuex from 'vuex'
@@ -27,7 +28,8 @@ const state: State = {
       y: 0
     },
     group: RoomGroup.Spectator,
-    color: -1
+    color: -1,
+    flags: PlayerFlags.None
   },
   clients: [],
   options: {
@@ -61,17 +63,39 @@ export default new Vuex.Store({
     },
     setPoseOf (state: State, payload: { uuid: string; pose: Pose }) {
       const index = state.clients.findIndex(c => c.uuid === payload.uuid)
+
       if (index !== -1) {
         state.clients[index].pose = payload.pose
       }
     },
-    setColor (state: State, payload: { color: ColorID }) {
-      state.me.color = payload.color
+    setColor (state: State, color: ColorID) {
+      state.me.color = color
     },
     setColorOf (state: State, payload: { uuid: string; color: ColorID }) {
       const index = state.clients.findIndex(c => c.uuid === payload.uuid)
+
       if (index !== -1) {
         state.clients[index].color = payload.color
+      }
+    },
+    setFlags (state: State, flags: PlayerFlags) {
+      state.me.flags |= flags
+    },
+    setFlagsOf (state: State, payload: { uuid: string; flags: PlayerFlags }) {
+      const index = state.clients.findIndex(c => c.uuid === payload.uuid)
+
+      if (index !== -1) {
+        state.clients[index].flags |= payload.flags
+      }
+    },
+    unsetFlags (state: State, flags: PlayerFlags) {
+      state.me.flags &= ~flags
+    },
+    unsetFlagsOf (state: State, payload: { uuid: string; flags: PlayerFlags }) {
+      const index = state.clients.findIndex(c => c.uuid === payload.uuid)
+
+      if (index !== -1) {
+        state.clients[index].flags &= ~payload.flags
       }
     },
     setGroup (state: State, payload: RoomGroup) {
@@ -124,7 +148,8 @@ export default new Vuex.Store({
         name: payload.name,
         pose: payload.pose,
         group: payload.group,
-        color: payload.color
+        color: payload.color,
+        flags: payload.flags
       }
       commit('addClient', client)
     },
@@ -134,7 +159,8 @@ export default new Vuex.Store({
         name: c.name,
         pose: c.pose,
         group: c.group,
-        color: c.color
+        color: c.color,
+        flags: c.flags
       }))
       commit('setAllClients', clients)
     },
@@ -164,6 +190,20 @@ export default new Vuex.Store({
     },
     [`socket_${ClientSocketEvents.SetHost}`] ({ commit }, payload: { ishost: boolean }) {
       commit('setHost', { ishost: payload.ishost })
+    },
+    [`socket_${ClientSocketEvents.SetFlagsOf}`] ({ commit, state }, payload: { uuid: string; flags: PlayerFlags }) {
+      if (payload.uuid === state.me.uuid) {
+        commit('setFlags', payload.flags)
+      } else {
+        commit('setFlagsOf', { uuid: payload.uuid, flags: payload.flags })
+      }
+    },
+    [`socket_${ClientSocketEvents.UnsetFlagsOf}`] ({ commit, state }, payload: { uuid: string; flags: PlayerFlags }) {
+      if (payload.uuid === state.me.uuid) {
+        commit('unsetFlags', payload.flags)
+      } else {
+        commit('unsetFlagsOf', { uuid: payload.uuid, flags: payload.flags })
+      }
     }
   },
   modules: {

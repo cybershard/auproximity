@@ -63,6 +63,9 @@ import { GameSettings } from '@/models/RoomModel'
 import { PlayerFlags } from '@/models/PlayerFlags'
 import { getClosestCamera } from '@/lib/CameraPositions'
 
+const AudioContext = window.AudioContext || // Default
+  (window as any).webkitAudioContext // Safari and old versions of Chrome
+
 @Component({
   components: { MyClientListItem, ClientListItem },
   directives: {

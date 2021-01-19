@@ -11,7 +11,7 @@
    <div class="pa-3 text-center">
      <p>Note: This software is meant to be used for Official Server Among Us Lobbies.
        If you want to have a solution like a custom server plugin or BepInEx client mod, direct message
-       <span class="highlight">Cybershard#3935</span> on Discord.
+       <span class="highlight">Cybershard#0001</span> on Discord.
      </p>
    </div>
  </v-card>

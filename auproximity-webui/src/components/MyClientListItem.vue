@@ -85,9 +85,3 @@ export default class MyClientListItem extends Vue {
   }
 }
 </script>
-
-<style scoped>
-  .mic-over-10 {
-    border: 5px solid white;
-  }
-</style>

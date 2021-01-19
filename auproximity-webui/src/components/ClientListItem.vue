@@ -86,5 +86,3 @@ export default class ClientListItem extends Vue {
   }
 }
 </script>
-<style scoped lang='stylus'>
-</style>

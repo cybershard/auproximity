@@ -18,7 +18,8 @@ const state: State = {
   },
   mic: {
     volumeNode: undefined,
-    destStream: undefined
+    destStream: undefined,
+    levels: 0
   },
   me: {
     uuid: '',

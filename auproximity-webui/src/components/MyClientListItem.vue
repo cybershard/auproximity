@@ -7,16 +7,18 @@
       <v-list-item-content>
         <v-list-item-title>
           <span class="float-left">
-            {{ client.name }}
+            <i v-if="mic.levels > 10" class="fas fa-volume-up"></i>
+            <i v-else class="fas fa-volume-off"></i>
+            <span class="pl-3">{{ client.name }}</span>
             <span v-if="$store.state.ishost">
               (HOST)
             </span>
           </span>
           <span class="float-right" v-if="mic.volumeNode !== undefined">
-            <span class="px-3">Connected</span><i class="fas fa-volume-up"></i>
+            <span class="px-3">Connected</span>
           </span>
           <span class="float-right" v-else>
-            <span class="px-3">Disconnected</span><i class="fas fa-volume-mute"></i>
+            <span class="px-3">Disconnected</span>
           </span>
         </v-list-item-title>
       </v-list-item-content>
@@ -83,3 +85,9 @@ export default class MyClientListItem extends Vue {
   }
 }
 </script>
+
+<style scoped>
+  .mic-over-10 {
+    border: 5px solid white;
+  }
+</style>

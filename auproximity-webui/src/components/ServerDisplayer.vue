@@ -115,8 +115,17 @@ export default class ServerDisplayer extends Vue {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const ctx = new AudioContext()
       const src = ctx.createMediaStreamSource(stream)
+      const analyzerNode = ctx.createAnalyser()
+      const scriptNode = ctx.createScriptProcessor(2048, 1, 1)
+
       const gainNode = ctx.createGain()
       const dest = ctx.createMediaStreamDestination()
+
+      analyzerNode.smoothingTimeConstant = 0.3
+      analyzerNode.fftSize = 1024
+
+      src.connect(analyzerNode)
+      analyzerNode.connect(scriptNode)
 
       src.connect(gainNode)
       gainNode.connect(dest)
@@ -125,6 +134,15 @@ export default class ServerDisplayer extends Vue {
 
       this.$store.state.mic.volumeNode = gainNode
       this.$store.state.mic.destStream = dest
+
+      scriptNode.addEventListener('audioprocess', () => {
+        const array = new Uint8Array(analyzerNode.frequencyBinCount)
+        analyzerNode.getByteFrequencyData(array)
+
+        const values = array.reduce((prev, cur) => prev + cur, 0)
+
+        this.$store.state.mic.levels = values / array.length
+      })
     }
   }
 
@@ -139,10 +157,15 @@ export default class ServerDisplayer extends Vue {
           this.remotectx = new AudioContext()
         }
         const source = this.remotectx.createMediaStreamSource(new MediaStream([remoteStream.getAudioTracks()[0]]))
+        const analyzerNode = this.remotectx.createAnalyser()
+        const scriptNode = this.remotectx.createScriptProcessor(2048, 1, 1)
+
         const gainNode = this.remotectx.createGain()
         const volumeNode = this.remotectx.createGain()
         const pannerNode = this.remotectx.createPanner()
 
+        source.connect(analyzerNode)
+        analyzerNode.connect(scriptNode)
         source.connect(gainNode)
         gainNode.connect(volumeNode)
         volumeNode.connect(pannerNode)
@@ -153,7 +176,19 @@ export default class ServerDisplayer extends Vue {
         pannerNode.maxDistance = 1
         pannerNode.rolloffFactor = 0 // Prevents the pannerNode from adjusting the volume (this is being done manually in the gainNode)
 
-        this.remoteStreams.push({ uuid: call.peer, source, gainNode, volumeNode, pannerNode, remoteStream })
+        const stream = { uuid: call.peer, source, gainNode, volumeNode, pannerNode, remoteStream, levels: 0 }
+
+        this.remoteStreams.push(stream)
+
+        scriptNode.addEventListener('audioprocess', () => {
+          const array = new Uint8Array(analyzerNode.frequencyBinCount)
+          analyzerNode.getByteFrequencyData(array)
+
+          const values = array.reduce((prev, cur) => prev + cur, 0)
+
+          stream.levels = values / array.length
+        })
+
         resolve()
       })
     })

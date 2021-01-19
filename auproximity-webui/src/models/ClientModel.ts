@@ -27,6 +27,7 @@ export interface RemoteStreamModel {
 export interface MyMicModel {
   volumeNode: GainNode | undefined;
   destStream: MediaStreamAudioDestinationNode | undefined;
+  levels: number;
 }
 
 export enum ColorID {

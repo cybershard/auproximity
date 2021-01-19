@@ -7,7 +7,7 @@
       <v-list-item-content>
         <v-list-item-title>
           <span class='float-left'>
-            <i v-if="stream.levels > 10" class="fas fa-volume-up"></i>
+            <i v-if="stream && stream.levels > 10" class="fas fa-volume-up"></i>
             <i v-else class="fas fa-volume-off"></i>
             <span class="pl-3">{{ client.name }}</span>
           </span>

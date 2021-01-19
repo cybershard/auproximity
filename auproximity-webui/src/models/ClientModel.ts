@@ -19,9 +19,11 @@ export interface RemoteStreamModel {
   uuid: string;
   source: MediaStreamAudioSourceNode;
   gainNode: GainNode;
+  globalVolumeNode: GainNode;
   volumeNode: GainNode;
   pannerNode: PannerNode;
   remoteStream: MediaStream;
+  levels: number;
 }
 
 export interface MyMicModel {

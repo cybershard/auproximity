@@ -1,8 +1,31 @@
 <template>
   <v-card class="pa-5">
+    <div class="quick-control text-center" >
+      <v-btn
+        icon
+        fab
+        x-large
+        dark
+        @click="toggleMute()"
+        :color="$store.state.muted ? 'red' : 'white'"
+      >
+        <v-icon>fa-microphone</v-icon>
+      </v-btn>
+      <v-btn
+        icon
+        fab
+        x-large
+        dark
+        @click="toggleDeaf()"
+        :color="$store.state.deafened ? 'red' : 'white'"
+      >
+        <v-icon>fa-headphones</v-icon>
+      </v-btn>
+    </div>
+    <br>
     <div class="text-center">
       <h2>{{ title }}</h2>
-      <h4 v-if="$store.state.joinedRoom">Current Map: {{ ["The Skeld", "Mira HQ", "Polus", "The Skeld April Fools", "Airship"][this.colliderMap] }}</h4>
+      <h4 v-if="$store.state.joinedRoom">Current Map: {{ ["The Skeld", "Mira HQ", "Polus", "The Skeld", "Airship"][this.colliderMap] }}</h4>
     </div>
     <v-list v-if="$store.state.joinedRoom">
       <MyClientListItem :client="$store.state.me" :mic="mymic" />
@@ -118,16 +141,20 @@ export default class ServerDisplayer extends Vue {
       const analyzerNode = ctx.createAnalyser()
       const scriptNode = ctx.createScriptProcessor(2048, 1, 1)
 
+      this.$store.state.globalGainNode = ctx.createGain()
+      this.$store.state.globalGainNode.gain.value = this.$store.state.muted ? 0 : 1
+
       const gainNode = ctx.createGain()
       const dest = ctx.createMediaStreamDestination()
-
       analyzerNode.smoothingTimeConstant = 0.3
       analyzerNode.fftSize = 1024
 
-      src.connect(analyzerNode)
+      src.connect(this.$store.state.globalGainNode)
+
+      this.$store.state.globalGainNode.connect(analyzerNode)
       analyzerNode.connect(scriptNode)
 
-      src.connect(gainNode)
+      this.$store.state.globalGainNode.connect(gainNode)
       gainNode.connect(dest)
 
       gainNode.gain.value = 1
@@ -160,23 +187,27 @@ export default class ServerDisplayer extends Vue {
         const analyzerNode = this.remotectx.createAnalyser()
         const scriptNode = this.remotectx.createScriptProcessor(2048, 1, 1)
 
+        const globalVolumeNode = this.remotectx.createGain()
         const gainNode = this.remotectx.createGain()
         const volumeNode = this.remotectx.createGain()
         const pannerNode = this.remotectx.createPanner()
 
         source.connect(analyzerNode)
         analyzerNode.connect(scriptNode)
-        source.connect(gainNode)
+
+        source.connect(globalVolumeNode)
+        globalVolumeNode.connect(gainNode)
         gainNode.connect(volumeNode)
         volumeNode.connect(pannerNode)
         pannerNode.connect(this.remotectx.destination)
 
         gainNode.gain.value = 1
+        globalVolumeNode.gain.value = 1
         volumeNode.gain.value = 1
         pannerNode.maxDistance = 1
         pannerNode.rolloffFactor = 0 // Prevents the pannerNode from adjusting the volume (this is being done manually in the gainNode)
 
-        const stream = { uuid: call.peer, source, gainNode, volumeNode, pannerNode, remoteStream, levels: 0 }
+        const stream = { uuid: call.peer, source, globalVolumeNode, gainNode, volumeNode, pannerNode, remoteStream, levels: 0 }
 
         this.remoteStreams.push(stream)
 
@@ -201,6 +232,7 @@ export default class ServerDisplayer extends Vue {
     this.remoteStreams.forEach(s => {
       s.source.disconnect()
       s.gainNode.disconnect()
+      s.globalVolumeNode.disconnect()
       s.volumeNode.disconnect()
       s.pannerNode.disconnect()
     })
@@ -383,6 +415,26 @@ export default class ServerDisplayer extends Vue {
     const trueVolume = 1 - (distance / this.LERP_VALUE)
     // clamp above 0, and then below 1
     return Math.min(Math.max(trueVolume, 0), 1)
+  }
+
+  toggleMute () {
+    this.$store.state.muted = !this.$store.state.muted
+    if (!this.$store.state.globalGainNode) {
+      return
+    }
+
+    this.$store.state.globalGainNode.gain.value = this.$store.state.muted ? 0 : 1
+  }
+
+  toggleDeaf () {
+    this.$store.state.deafened = !this.$store.state.deafened
+    if (!this.$store.state.globalGainNode) {
+      return
+    }
+
+    this.remoteStreams.forEach(stream => {
+      stream.globalVolumeNode.gain.value = this.$store.state.deafened ? 0 : 1
+    })
   }
 
   get title () {

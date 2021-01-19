@@ -21,6 +21,9 @@ const state: State = {
     destStream: undefined,
     levels: 0
   },
+  globalGainNode: undefined,
+  muted: false,
+  deafened: false,
   me: {
     uuid: '',
     name: '',
@@ -217,6 +220,9 @@ export interface State {
     backendType: BackendType;
   };
   mic: MyMicModel;
+  globalGainNode: GainNode|undefined;
+  muted: boolean;
+  deafened: boolean;
   me: ClientModel;
   clients: ClientModel[];
   options: HostOptions;

@@ -76,51 +76,51 @@
   resolved "https://registry.yarnpkg.com/@sindresorhus/is/-/is-0.14.0.tgz#9fb3a3cf3132328151f353de4632e01e52102bea"
   integrity sha512-9NET910DNaIPngYnLLPeg+Ogzqsi9uM4mSboU5y6p8S5DzMTVEsJZrawi+BoDNUVBa2DhJqQYUFvMDfgU062LQ==
 
-"@skeldjs/client@^2.2.17":
-  version "2.2.17"
-  resolved "https://registry.yarnpkg.com/@skeldjs/client/-/client-2.2.17.tgz#0b98f9691cffc1627534285a88b6e183af0641d6"
-  integrity sha512-KT0Pp19rNdL4WtApgELGlw8f0nHZKLLDviPneOltM7cidk1TBKdcDlevZsrct4gHvE+6bKv3rSZkJLRDT9TLAg==
+"@skeldjs/client@^2.2.23":
+  version "2.2.23"
+  resolved "https://registry.yarnpkg.com/@skeldjs/client/-/client-2.2.23.tgz#d7d9e3b85b41aa6e056d527a8f356de3b74a9d07"
+  integrity sha512-W2r5p97sjsHTCJlQDBjkMwD+Z62+6XrMXkPu3AUJ7RRVzu7pQnnncnOO6/HajeRIJRZ6LKyG0bd57XcMSQ0J8Q==
   dependencies:
-    "@skeldjs/common" "^2.2.17"
-    "@skeldjs/constant" "^2.2.7"
-    "@skeldjs/protocol" "^2.2.7"
-    "@skeldjs/util" "^2.2.7"
+    "@skeldjs/common" "^2.2.23"
+    "@skeldjs/constant" "^2.2.18"
+    "@skeldjs/protocol" "^2.2.18"
+    "@skeldjs/util" "^2.2.18"
 
-"@skeldjs/common@^2.2.17":
-  version "2.2.17"
-  resolved "https://registry.yarnpkg.com/@skeldjs/common/-/common-2.2.17.tgz#4d41c1fbc6d72971cf5d580e0596574baa8b9a8d"
-  integrity sha512-eonF3k3SWONOsskPzujBLl2AlJpbwWnat41cGWghANsm3V+u+9BhU+brWA+CvZ3KuyoSByLxKG1jNI12peYsBQ==
+"@skeldjs/common@^2.2.23":
+  version "2.2.23"
+  resolved "https://registry.yarnpkg.com/@skeldjs/common/-/common-2.2.23.tgz#da6a64d20d0ea00d2587d4fa6b7f752d13243cdf"
+  integrity sha512-n36pc3tgLxtBdVpD1RPqBRL4+kNDGfg/L8M0ug5Ee1ykHL+eHDt5nsTmhb/px596filWK3acKan6v6mdDXZ/fg==
   dependencies:
-    "@skeldjs/constant" "^2.2.7"
-    "@skeldjs/protocol" "^2.2.7"
+    "@skeldjs/constant" "^2.2.18"
+    "@skeldjs/protocol" "^2.2.18"
     "@skeldjs/types" "^2.2.7"
-    "@skeldjs/util" "^2.2.7"
+    "@skeldjs/util" "^2.2.18"
 
-"@skeldjs/constant@^2.2.7":
-  version "2.2.7"
-  resolved "https://registry.yarnpkg.com/@skeldjs/constant/-/constant-2.2.7.tgz#4863431be74c1881dd49753b1a5f7da9d8332aa0"
-  integrity sha512-QgfJIsDi25wuNtHkjZOxEkPC284dHXP1wZAxD1qsIxUaQVfUExZnSVTklX6SJI1ZkaPlrOPM3HKQGVxsTl8MxQ==
+"@skeldjs/constant@^2.2.18":
+  version "2.2.18"
+  resolved "https://registry.yarnpkg.com/@skeldjs/constant/-/constant-2.2.18.tgz#77abf1cbec68069910d11bd65de0417c661a9d0a"
+  integrity sha512-NHvi2wq/nNsj/5rgbR6Ss5uJn49ZZd9wqxHt14PVTaGMqrtzohtgyqTuDkJsasDBMtu5a6/3Atru1tBK0HEBoA==
   dependencies:
-    "@skeldjs/util" "^2.2.7"
+    "@skeldjs/util" "^2.2.18"
 
-"@skeldjs/protocol@^2.2.7":
-  version "2.2.7"
-  resolved "https://registry.yarnpkg.com/@skeldjs/protocol/-/protocol-2.2.7.tgz#bfb14d6694ebc9f6a7f25874278395d8858ae0db"
-  integrity sha512-Lkih/gKkG1990Conj6BOe66a3I/hLP66JRHn5AztYg8R+ADn9B77E1x+H5s0uJhxeZn7/64cNCgzY/imOFUOWw==
+"@skeldjs/protocol@^2.2.18":
+  version "2.2.18"
+  resolved "https://registry.yarnpkg.com/@skeldjs/protocol/-/protocol-2.2.18.tgz#7f4505dbbda0066ac1b8520519432d597174481a"
+  integrity sha512-d9/DtheEe0CVn/gP3KUEfs3uKDQmjuYQ33OnnWAKMLu8bWAoeAr9LrbcUdImE64dwEY67i0PsQI9CGNVLrmOsg==
   dependencies:
-    "@skeldjs/constant" "^2.2.7"
+    "@skeldjs/constant" "^2.2.18"
     "@skeldjs/types" "^2.2.7"
-    "@skeldjs/util" "^2.2.7"
+    "@skeldjs/util" "^2.2.18"
 
 "@skeldjs/types@^2.2.7":
   version "2.2.7"
   resolved "https://registry.yarnpkg.com/@skeldjs/types/-/types-2.2.7.tgz#2070a2d3205099240df9e23edc1a483a698b06d2"
   integrity sha512-SNS3DiU2eoKMbU1fyZvQ57kngv+sCI7ziBmEVeRLTzK+10gN9Z9tuD1dHY+rlHhFnbttaJq7NVCyzkdDbvrjyQ==
 
-"@skeldjs/util@^2.2.7":
-  version "2.2.7"
-  resolved "https://registry.yarnpkg.com/@skeldjs/util/-/util-2.2.7.tgz#e9c7e72dee5b7daf23b064534508e70f109f75cf"
-  integrity sha512-DzfWZ9v7bOP3q6PU0QHHFep0vKGIowi9ogu0iPt6gpyaGZLgeXqp2mxI4YpqqVFvAJEO5hPAXjtp9J5EKmOt0g==
+"@skeldjs/util@^2.2.18":
+  version "2.2.18"
+  resolved "https://registry.yarnpkg.com/@skeldjs/util/-/util-2.2.18.tgz#33af0040aa2742ec0fc2451a1a4d389813dfc3f8"
+  integrity sha512-EIPUw62xATGF5rvonaxxqDzfO+512jEJETkO5+wk7qxTmYjXiNp/LiAdkQYcYEHyspbMIuGqHwPcx17WrLNSiQ==
 
 "@szmarczak/http-timer@^1.1.2":
   version "1.1.2"

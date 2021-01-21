@@ -161,8 +161,8 @@ export default class Client implements ClientBase {
         this.socket.emit(ClientSocketEvents.SetColorOf, { uuid, color });
     }
 
-    setHost(ishost: boolean) {
-        this.socket.emit(ClientSocketEvents.SetHost, { ishost });
+    setHost(hostname: string) {
+        this.socket.emit(ClientSocketEvents.SetHost, { hostname });
     }
 
     sendOptions(options: HostOptions) {

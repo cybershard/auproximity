@@ -59,12 +59,12 @@ export default class ImpostorBackend extends BackendAdapter {
                 this.emitAllPlayerJoinGroups(RoomGroup.Spectator);
             });
 
-            console.log(`Initialized Impostor Backend at http://${this.backendModel.ip}:${IMPOSTOR_BACKEND_PORT}/hub`);
+            this.log("info", `Impostor Backend initialized at http://${this.backendModel.ip}:${IMPOSTOR_BACKEND_PORT}/hub`);
             this.connection.start()
                 .then(() => this.connection.send(ImpostorSocketEvents.TrackGame, this.backendModel.gameCode))
-                .catch(err => console.log(`Error in ImpostorBackend: ${err}`));
+                .catch(err => this.log("error", `Error in ImpostorBackend: ${err}`));
         } catch (err) {
-            console.log(`Error in ImpostorBackend: ${err}`);
+            this.log("error", `Error in ImpostorBackend: ${err}`);
         }
     }
 

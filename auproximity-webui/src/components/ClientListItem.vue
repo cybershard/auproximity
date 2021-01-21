@@ -10,6 +10,9 @@
             <i v-if="stream && stream.levels > 10" class="fas fa-volume-up"></i>
             <i v-else class="fas fa-volume-off"></i>
             <span class="pl-3">{{ client.name }}</span>
+            <span v-if="$store.state.host === client.name">
+              (HOST)
+            </span>
           </span>
           <span class='float-right' v-if='stream !== undefined'>
             <span class='px-3'>Connected</span>

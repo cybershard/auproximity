@@ -22,6 +22,7 @@ import Client, { Pose, PlayerModel } from "./Client";
 import { PlayerFlags } from "./types/enums/PlayerFlags";
 
 import { state } from "./main";
+import { CLIENT_RENEG_LIMIT } from "tls";
 
 export default class Room {
     public backendModel: BackendModel;
@@ -37,6 +38,9 @@ export default class Room {
         falloffVision: false,
         colliders: true,
         paSystems: true
+    };
+    settings: GameSettings = {
+        crewmateVision: 1
     };
     players = new Map<string, PlayerModel>();
 
@@ -139,7 +143,7 @@ export default class Room {
             this.hostname = payload.hostname;
 
             this.members.forEach(c => {
-                c.setHost(c.name === this.hostname);
+                c.setHost(this.hostname);
             });
         });
 
@@ -202,7 +206,8 @@ export default class Room {
         this.members.push(client);
 
         client.sendOptions(this.options);
-        client.setHost(client.name === this.hostname);
+        client.sendSettings(this.settings)
+        client.setHost(this.hostname);
     }
 
     setOptions(options: HostOptions, host: boolean = false) {

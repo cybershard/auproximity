@@ -45,7 +45,7 @@ const state: State = {
   clientOptions: {
     omniscientGhosts: false
   },
-  ishost: false
+  host: ''
 }
 export default new Vuex.Store({
   state,
@@ -118,8 +118,8 @@ export default new Vuex.Store({
       state.me.name = payload.name
       state.backendModel = payload.backendModel
     },
-    setHost (state: State, payload: { ishost: boolean }) {
-      state.ishost = payload.ishost
+    setHost (state: State, payload: { hostname: string }) {
+      state.host = payload.hostname
     },
     setOptions (state: State, payload: { options: HostOptions }) {
       state.options = payload.options
@@ -192,8 +192,8 @@ export default new Vuex.Store({
         commit('setGroupOf', { uuid: payload.uuid, group: payload.group })
       }
     },
-    [`socket_${ClientSocketEvents.SetHost}`] ({ commit }, payload: { ishost: boolean }) {
-      commit('setHost', { ishost: payload.ishost })
+    [`socket_${ClientSocketEvents.SetHost}`] ({ commit }, payload: { hostname: string }) {
+      commit('setHost', { hostname: payload.hostname })
     },
     [`socket_${ClientSocketEvents.SetFlagsOf}`] ({ commit, state }, payload: { uuid: string; flags: PlayerFlags }) {
       if (payload.uuid === state.me.uuid) {
@@ -227,5 +227,5 @@ export interface State {
   clients: ClientModel[];
   options: HostOptions;
   clientOptions: ClientOptions;
-  ishost: boolean;
+  host: string;
 }

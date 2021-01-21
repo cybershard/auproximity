@@ -10,31 +10,31 @@ import {
     PayloadTag,
     MessageTag,
     RpcTag,
-    SystemType
+    SystemType,
+    PlayerGameData,
+    ColorID
 } from "@skeldjs/constant";
 
 import {
     GameOptions,
     PayloadMessage,
     GameDataMessage,
-    RpcMessage,
     GameDataPayload,
     SyncSettingsRpc
 } from "@skeldjs/protocol";
 
 import {
-    PlayerGameData
-} from "@skeldjs/types";
-
-import {
     Networkable,
-    HudOverrideSystem,
     HqHudSystem,
     Room,
     PlayerData,
     CustomNetworkTransform,
     GameData,
-    SecurityCameraSystem
+    SecurityCameraSystem,
+    PlayerControl,
+    MeetingHud,
+    ShipStatus,
+    SystemStatus
 } from "@skeldjs/common";
 
 import logger from "../util/logger";
@@ -48,11 +48,14 @@ import {
     BackendAdapter,
     LogMode
 } from "./Backend";
+
 import { PlayerFlags } from "../types/enums/PlayerFlags";
+import { DebugLevel } from "@skeldjs/client/js/lib/interface/ClientConfig";
 
 const GAME_VERSION = "2020.11.17.0";
 
 export default class PublicLobbyBackend extends BackendAdapter {
+    destroyed: boolean;
     backendModel: PublicLobbyBackendModel;
 
     client: SkeldjsClient;
@@ -77,12 +80,22 @@ export default class PublicLobbyBackend extends BackendAdapter {
         logger[mode](chalk.grey("[" + this.backendModel.gameCode + "]"), formatted);
     }
 
-    async doJoin(doSpawn = false, max_attempts = 5, attempt = 0) {
+    async doJoin(max_attempts = 5, attempt = 0): Promise<boolean> {
+        if (!this.players_cache || !this.components_cache || !this.global_cache) {
+            if (!await this.initialSpawn()) {
+                return false;
+            }
+        }
+
+        if (!this.client) {
+            this.client = new SkeldjsClient(GAME_VERSION, { debug: DebugLevel.None, allowHost: false });
+        }
+
         if (attempt > max_attempts) {
             this.log("error", "Could not join game.");
         }
 
-        this.log("info", "Joining game with this.server %s:%i, " + (doSpawn ? "" : "not ") + "spawning, attempt #%i", this.server[0], this.server[1], attempt + 1);
+        this.log("info", "Joining game with this.server %s:%i, not spawning, attempt #%i", this.server[0], this.server[1], attempt + 1);
 
         await this.client.connect(this.server[0], this.server[1]);
         await this.client.identify("auproxy");
@@ -95,7 +108,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
 
             this.log("warn", "Failed to join game (" + err.message + "), Retrying " + (max_attempts - attempt) + " more times.")
             this.emitError(err.message + ". Retrying " + (max_attempts - attempt) + " more times.");
-            return await this.doJoin(doSpawn, max_attempts, attempt);
+            return await this.doJoin(max_attempts, attempt);
         }
         
         this.log("info", "Replacing state with cached state.. (%i objects, %i netobjects, %i room components)", this.players_cache.size, this.components_cache.size, this.global_cache.length);
@@ -118,48 +131,16 @@ export default class PublicLobbyBackend extends BackendAdapter {
         }
 
         this.log("success", "Joined & successfully replaced state!");
+
+        if (this.client.room.host && this.client.room.host.data) {
+            this.log("success", "Found host: " + this.client.room.host.data.name);
+            this.emitHostChange(this.client.room.host.data.name);
+        }
+        return true;
     }
 
     async handlePayload(payload: PayloadMessage) {
         switch (payload.tag) {
-        case PayloadTag.JoinGame:
-            if (payload.bound == "client" && !payload.error) {
-                if (this.client.room && this.client.room.host && this.client.room.host.data) {
-                    this.emitHostChange(this.client.room.host.data.name);
-                }
-            }
-            break;
-        case PayloadTag.StartGame:
-            this.emitAllPlayerJoinGroups(RoomGroup.Main);
-
-            this.log("info", "Game started.");
-            break;
-        case PayloadTag.EndGame:
-            this.emitAllPlayerJoinGroups(RoomGroup.Spectator);
-            this.log("info", "Game ended, re-joining..");
-
-            await this.doJoin();
-            break;
-        case PayloadTag.RemovePlayer:
-            this.log("log", "Player " + payload.clientid + " was removed.");
-
-            if (this.client.room.amhost) {
-                if (this.client.room.players.size === 1) {
-                    this.log("warn", "Every player left, disconnecting.");
-                    await this.client.disconnect();
-                    return;
-                } else {
-                    this.log("warn", "Became host, disconnecting and re-joining..")
-                    await this.client.disconnect();
-                    await this.doJoin();
-                }
-            }
-            
-            if (this.client.room && this.client.room.host && this.client.room.host.data) {
-                this.log("info", "Host changed to " + this.client.room.host.data.name);
-                this.emitHostChange(this.client.room.host.data.name);
-            }
-            break;
         case PayloadTag.GameData:
         case PayloadTag.GameDataTo:
             payload.messages.forEach(message => {
@@ -177,16 +158,6 @@ export default class PublicLobbyBackend extends BackendAdapter {
         case MessageTag.Data:
             if (message.netid === this.client.room?.shipstatus?.netid) {
                 if (this.currentMap === MapID.TheSkeld || this.currentMap === MapID.Polus) {
-                    const comms = this.client.room?.shipstatus?.systems?.[SystemType.Communications] as HudOverrideSystem;
-                    
-                    if (comms) {
-                        if (comms.sabotaged) {
-                            this.emitPlayerFromJoinGroup(RoomGroup.Main, RoomGroup.Muted);
-                        } else {
-                            this.emitPlayerFromJoinGroup(RoomGroup.Muted, RoomGroup.Main);
-                        }
-                    }
-
                     const security = this.client.room?.shipstatus?.systems?.[SystemType.Security] as SecurityCameraSystem;
 
                     if (security) {
@@ -209,61 +180,20 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 }
             }
             break;
-        case MessageTag.RPC:
-            this.handleRPCMessage(message);
-            break;
         }
     }
 
-    handleRPCMessage(message: RpcMessage) {
-        switch (message.rpcid) {
-        case RpcTag.SyncSettings:
-            this.emitSettingsUpdate({
-                crewmateVision: message.settings.crewmateVision
-            });
-            break;
-        case RpcTag.SetColor: {
-            const player = [...this.client.room.players.values()].find(player => {
-                return player.control?.netid === message.netid
-            });
+    async disconnect() {
+        this.players_cache = new Map([...this.client.room.objects.entries()].filter(([ objectid ]) => objectid !== this.client.clientid && objectid > 0 /* not global */)) as Map<number, PlayerData>;
+        this.components_cache = new Map([...this.client.room.netobjects.entries()].filter(([ , component ]) => component.ownerid !== this.client.clientid));
+        this.global_cache = this.client.room.components;
 
-            if (player && player.data) {
-                this.emitPlayerColor(player.data.name, message.color)
-            }
-            break;
-        }
-        case RpcTag.StartMeeting:
-            setTimeout(() => {
-                this.emitAllPlayerPoses({ x: 0, y: 0 });
-            }, 2500);
-            this.log("log", "Meeting started.");
-            break;
-        case RpcTag.VotingComplete:
-            this.log("log", "Meeting ended.");
-            if (message.exiled !== 0xff) {
-                setTimeout(() => {
-                    const player = this.client.room.getPlayerByPlayerId(message.exiled);
-                    
-                    if (player && player.data) {
-                        this.emitPlayerJoinGroup(player.data.name, RoomGroup.Spectator);
-                        this.log("log", "Player " + player.data.name + " (" + player.id + ")  was voted off");
-                    }
-                }, 2500);
-            }
-            break;
-        case RpcTag.MurderPlayer: {
-            const player = [...this.client.room.players.values()].find(player => player.control?.netid === message.victimid);
-            
-            if (player && player.data) {
-                this.log("log", "Player " + player.data.name + " (" + player.id + ") was murdered.");
-                this.emitPlayerJoinGroup(player.data.name, RoomGroup.Spectator);
-            }
-            break;
-        }
-        }
+        await this.client.disconnect();
     }
 
     async initialize(): Promise<void> {
+        this.destroyed = false;
+
         try {
             this.log("info", "PublicLobbyBackend initialized in region " + ["NA", "EU", "AS"][this.backendModel.region]);
 
@@ -275,12 +205,11 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 this.server = MasterServers.AS[1] as [ string, number ];
             }
 
-            await this.initialSpawn(this.server);
-
-            await this.doJoin(false);
+            if (!await this.doJoin())
+                return;
 
             this.client.on("disconnect", (reason, message) => {
-                this.log("warn", "Client disconnected: " + (reason === undefined ? "No reason." : (reason + " (" + message + ")")));
+                this.log("info", "Client disconnected: " + (reason === undefined ? "No reason." : (reason + " (" + message + ")")));
             });
             
             this.client.on("packet", packet => {
@@ -299,6 +228,102 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 if (transform.owner && transform.owner.data) {
                     this.log("log", "Got SnapTo for " + transform.owner.data.name + " (" + transform.owner.id + ") to x: " + transform.position.x + " y: " + transform.position.y);
                     this.emitPlayerPose(transform.owner.data.name, transform.position);
+                } else {
+                    this.log("warn", "Got snapto, but there was no data.");
+                }
+            });
+
+            this.client.on("gameStart", async () => {
+                this.emitAllPlayerJoinGroups(RoomGroup.Main);
+                this.log("info", "Game started.");
+            });
+
+            this.client.on("gameEnd", async () => {
+                this.emitAllPlayerJoinGroups(RoomGroup.Spectator);
+                this.log("info", "Game ended, re-joining..");
+                
+                await this.doJoin();
+            });
+
+            this.client.on("setHost", async (room: Room, host: PlayerData) => {
+                if(!host)
+                    return;
+
+                if (host.id === this.client.clientid) {
+                    if (this.client.room.players.size === 1) {
+                        this.log("warn", "Every player left, disconnecting.");
+                        await this.client.disconnect();
+                        return;
+                    }
+
+                    this.log("warn", "Became host, disconnecting and re-joining..");
+                    
+                    await this.disconnect();
+                    await this.doJoin();
+                    return;
+                }
+
+                if (host && host.data) {
+                    this.log("info", "Host changed to " + host.data.name);
+                    this.emitHostChange(host.data.name);
+                } else {
+                    this.log("warn", "Host changed, but there was no data.");
+                }
+            });
+
+            this.client.on("leave", (room: Room, player: PlayerData) => {
+                this.log("log", "Player " + player.id + " left or was removed.");
+            });
+
+            this.client.on("systemSabotage", (room: Room, ship: ShipStatus, system: SystemStatus) => {
+                if (system.systemType === SystemType.Communications) {
+                    this.emitPlayerFromJoinGroup(RoomGroup.Main, RoomGroup.Muted);
+                    this.log("log", "Communications was sabotaged.");
+                }
+            });
+
+            this.client.on("systemRepair", (room: Room, ship: ShipStatus, system: SystemStatus) => {
+                if (system.systemType === SystemType.Communications) {
+                    this.emitPlayerFromJoinGroup(RoomGroup.Muted, RoomGroup.Main);
+                    this.log("log", "Communications was repaired.");
+                }
+            });
+
+            this.client.on("syncSettings", (room: Room, control: PlayerControl, settings: GameOptions) => {
+                this.emitSettingsUpdate(settings);
+
+                this.log("log", "Settings updated, crewmate vision: " + settings.crewmateVision + ".");
+            });
+
+            this.client.on("setColor", (room: Room, control: PlayerControl, color: ColorID) => {
+                if (control && control.owner && control.owner.data) {
+                    this.emitPlayerColor(control.owner.data.name, color);
+                } else {
+                    this.log("warn", "Color was set, but there was no data.");
+                }
+            });
+
+            this.client.on("meeting", () => {
+                setTimeout(() => {
+                    this.emitAllPlayerPoses({ x: 0, y: 0 });
+                }, 2500);
+
+                this.log("log", "Meeting started.");
+            });
+
+            this.client.on("completeVoting", (room: Room, meetinghud: MeetingHud, tie: boolean, exiled: PlayerData) => {
+                if (exiled && exiled.data) {
+                    this.emitPlayerJoinGroup(exiled.data.name, RoomGroup.Spectator);
+                    this.log("log", "Player " + exiled.data.name + " (" + exiled.id + ") was voted off");
+                }
+            });
+
+            this.client.on("murder", (room: Room, player: PlayerControl, victim: PlayerData) => {
+                if (victim && victim.data) {
+                    this.log("log", "Player " + victim.data.name + " (" + victim.id + ") was murdered.");
+                    this.emitPlayerJoinGroup(victim.data.name, RoomGroup.Spectator);
+                } else {
+                    this.log("warn", "Player was murdered, but there was no data.");
                 }
             });
 
@@ -309,6 +334,10 @@ export default class PublicLobbyBackend extends BackendAdapter {
                     this.log("info", "Removed player " + playerData.name + (client ? " (" + client.id + ")" : ""));
                     this.emitPlayerColor(playerData.name, -1);
                 }
+            });
+
+            this.client.on("error", () => {
+                
             });
 
             this.log("success", "Initialized PublicLobbyBackend!");
@@ -353,9 +382,10 @@ export default class PublicLobbyBackend extends BackendAdapter {
         });
     }
 
-    awaitSettings(client: SkeldjsClient) {
+    awaitSettings() {
         return new Promise<GameOptions>(resolve => {
-            client.on("packet", function onPacket(packet) {
+            const _this = this;
+            this.client.on("packet", function onPacket(packet) {
                 if (packet.bound === "client" && packet.op === Opcode.Reliable) {
                     const gamedata = packet.payloads.find(
                         payload => payload.tag === PayloadTag.GameData &&
@@ -367,7 +397,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
                         const syncsettings = gamedata.messages.find(message => message.tag === MessageTag.RPC && message.rpcid === RpcTag.SyncSettings) as SyncSettingsRpc;
 
                         if (syncsettings) {
-                            client.off("packet", onPacket);
+                            _this.client.off("packet", onPacket);
 
                             resolve(syncsettings.settings);
                         }
@@ -377,38 +407,56 @@ export default class PublicLobbyBackend extends BackendAdapter {
         });
     }
 
-    async initialSpawn(server: [string, number]): Promise<void> {
-        this.client = new SkeldjsClient(GAME_VERSION);
+    async initialSpawn(): Promise<boolean> {
+        this.client = new SkeldjsClient(GAME_VERSION, { debug: DebugLevel.None, allowHost: false });
+        
         this.log("info", "Joining for the first time with server %s:%i", this.server[0], this.server[1]);
         try {
             await this.client.connect(this.server[0], this.server[1]);
             await this.client.identify("auproxy");
         } catch (e) {
-            this.log("fatal", "Failed to connect to this.server %s:%i", this.server[0], this.server[1]);
-            this.log("fatal", e);
+            this.log("fatal", e.toString());
             this.emitError("Couldn't connect to the Among Us this.servers, the this.server may be full, try again later!");
-            return;
+            return false;
         }
         this.log("success", "Successfully connected.");
 
+        if (!this.client) {
+            await this.destroy();
+            return false;
+        }
+        
         this.log("info", "Joining room..");
-        let room: Room;
+
         try {
-            room = await this.client.join(this.backendModel.gameCode);
+            await this.client.join(this.backendModel.gameCode);
         } catch (e) {
-            this.log("fatal", "Couldn't join room");
-            this.log("fatal", e);
+            this.log("fatal", e.toString());
             this.emitError("Couldn't join the game, make sure that the game hasn't started and there is a spot for the client!");
-            return;
+            return false;
         }
         this.log("success", "Successfully joined room.");
 
         this.log("info", "Waiting for spawns and settings..");
-        await this.awaitSpawns(room);
+        const room = this.client?.room;
 
-        const settings = await this.awaitSettings(this.client);
+        if (!room) {
+            await this.destroy();
+            return false;
+        }
+        
+        await this.awaitSpawns(room);
+        
+        if (!this.client) {
+            await this.destroy();
+            return false;
+        }
+
+        const settings = await this.awaitSettings();
+        
         this.currentMap = settings.map;
         this.emitMapChange(settings.map);
+        this.emitSettingsUpdate(settings);
         
         if (room.host && room.host.data) {
             this.emitHostChange(room.host.data.name);
@@ -417,24 +465,26 @@ export default class PublicLobbyBackend extends BackendAdapter {
 
         this.log("info", "Cleaning up and preparing for re-join..");
 
-        this.players_cache = new Map([...room.objects.entries()].filter(([ objectid ]) => objectid !== this.client.clientid && objectid > 0 /* not global */)) as Map<number, PlayerData>;
-        this.components_cache = new Map([...room.netobjects.entries()].filter(([ , component ]) => component.ownerid !== this.client.clientid));
-        this.global_cache = room.components;
-
-        if (room.host && room.host.data) {
-            this.log("success", "Found host: " + room.host.data.name);
-            this.emitHostChange(room.host.data.name);
+        for (const [ clientid, player ] of room.players) {
+            if (player && player.data) {
+                this.emitPlayerColor(player.data.name, player.data.color);
+            }
         }
         
-        await this.client.disconnect();
+        await this.disconnect();
+        return true;
     }
 
     async destroy(): Promise<void> {
+        if (this.destroyed)
+            return;
+
         if (this.client && this.client.socket) {
             await this.client.disconnect();
             this.client = undefined;
         }
         this.log("info", "Destroyed PublicLobbyBackend.");
+        this.destroyed = true;
     }
 }
 

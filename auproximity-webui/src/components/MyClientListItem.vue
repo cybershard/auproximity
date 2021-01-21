@@ -10,7 +10,7 @@
             <i v-if="mic.levels > 10" class="fas fa-volume-up"></i>
             <i v-else class="fas fa-volume-off"></i>
             <span class="pl-3">{{ client.name }}</span>
-            <span v-if="$store.state.ishost">
+            <span v-if="$store.state.host === client.name">
               (HOST)
             </span>
           </span>

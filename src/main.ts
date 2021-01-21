@@ -11,7 +11,7 @@ import sslRedirect from "heroku-ssl-redirect";
 import { AUProximityState } from "./types/models/AUProximityState";
 
 import Client from "./Client";
-import Room from "./Room";
+import logger from "./util/logger";
 
 const app = express();
 
@@ -44,7 +44,7 @@ export const state: AUProximityState = {
 io.on("connection", (socket: Socket) => {
     const client = new Client(socket, v4());
     state.allClients.push(client);
-    console.log("user connected", client.uuid);
+    logger.log("User connected, uuid:", client.uuid);
 });
 
 
@@ -54,5 +54,5 @@ app.all("*", (req, res) => {
 
 const port = process.env.PORT || 8079;
 server.listen(port, () => {
-    console.log(`Listening on port ${port}`);
+    logger.success(`Listening on port ${port}`);
 });

@@ -12,7 +12,7 @@
           v-bind="attrs"
           v-on="on"
           v-model="$store.state.options.falloff"
-          :readonly="!$store.state.ishost"
+          :readonly="$store.state.host !== $store.state.me.name"
           :disabled="$store.state.options.falloffVision || !$store.state.joinedRoom"
           @change="updateOptions"
         >
@@ -25,7 +25,7 @@
               min="2.5"
               max="10"
               step="0.1"
-              :readonly="!$store.state.ishost"
+              :readonly="$store.state.host !== $store.state.me.name"
               :disabled="$store.state.options.falloffVision || !$store.state.joinedRoom"
               @change="updateOptions"
             ></v-text-field>
@@ -34,21 +34,21 @@
         <v-checkbox
           label="Only hear people in vision"
           v-model="$store.state.options.falloffVision"
-          :readonly="!$store.state.ishost"
+          :readonly="$store.state.host !== $store.state.me.name"
           :disabled="!$store.state.joinedRoom"
           @change="updateOptions"
         ></v-checkbox>
         <v-checkbox
           label="Walls block voice"
           v-model="$store.state.options.colliders"
-          :readonly="!$store.state.ishost"
+          :readonly="$store.state.host !== $store.state.me.name"
           :disabled="!$store.state.joinedRoom"
           @change="updateOptions"
         ></v-checkbox>
         <v-checkbox
           label="Hear through cameras"
           v-model="$store.state.options.paSystems"
-          :readonly="!$store.state.ishost"
+          :readonly="$store.state.host !== $store.state.me.name"
           :disabled="!$store.state.joinedRoom"
           @change="updateOptions"
         ></v-checkbox>

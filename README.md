@@ -68,6 +68,10 @@ However, the client manages the voice system completely. As such, the client can
 easily be extended to create a desktop application, an application that
 interfaces with Discord RPC, and even include features like minimaps!
 
+## Possible issues
+
+[X] I appears as ''Disconnected'' on the site (allow your microphone)
+
 ## Contributing
 I welcome PRs for adding additional backends, client features, and even forks for other games. 
 

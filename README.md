@@ -70,14 +70,14 @@ interfaces with Discord RPC, and even include features like minimaps!
 
 ## Possible issues
 
-Q: I appears as ''Disconnected'' on the site 
-A: Allow your microphone
+- Q: I appears as ''Disconnected'' on the site 
+- A: Allow your microphone
 
-Q: I can't use voice approach chat on iOS or iPad 
-A: Apple blocks you from using the microphone in the background, the only method and taking another phone and using one on the website and another on Among Us
+- Q: I can't use voice approach chat on iOS or iPad 
+- A: Apple blocks you from using the microphone in the background, the only method and taking another phone and using one on the website and another on Among Us
 
-Q: I can't hear some people 
-A: Switch browser, for example: firefox
+- Q: I can't hear some people 
+- A: Switch browser, for example: firefox
 
 ## Contributing
 I welcome PRs for adding additional backends, client features, and even forks for other games. 

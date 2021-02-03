@@ -70,7 +70,7 @@ interfaces with Discord RPC, and even include features like minimaps!
 
 ## Possible issues
 
-- Q: I appears as ''Disconnected'' on the site 
+- Q: I appears as "Disconnected" on the site 
   - A: Allow your microphone
 
 - Q: I can't use voice approach chat on iOS or iPad 

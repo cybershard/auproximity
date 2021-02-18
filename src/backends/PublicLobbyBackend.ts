@@ -1,7 +1,7 @@
 import util from "util";
 import chalk from "chalk";
 
-import { SkeldjsClient } from "@skeldjs/client"
+import { SkeldjsClient } from "@skeldjs/client";
 
 import {
     MasterServers,
@@ -54,6 +54,8 @@ import { DebugLevel } from "@skeldjs/client/js/lib/interface/ClientConfig";
 
 const GAME_VERSION = "2020.11.17.0";
 
+const sleep = ms => new Promise<void>(resolve => setTimeout(resolve, ms));
+
 export default class PublicLobbyBackend extends BackendAdapter {
     destroyed: boolean;
     backendModel: PublicLobbyBackendModel;
@@ -74,7 +76,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
         this.gameID = this.backendModel.gameCode;
     }
 
-    log(mode: LogMode, format: string, ...params: any[]) {
+    log(mode: LogMode, format: string, ...params: unknown[]): void {
         const formatted = util.format(format, ...params);
 
         logger[mode](chalk.grey("[" + this.backendModel.gameCode + "]"), formatted);
@@ -106,19 +108,19 @@ export default class PublicLobbyBackend extends BackendAdapter {
             const err = e as Error;
             attempt++;
 
-            this.log("warn", "Failed to join game (" + err.message + "), Retrying " + (max_attempts - attempt) + " more times.")
+            this.log("warn", "Failed to join game (" + err.message + "), Retrying " + (max_attempts - attempt) + " more times.");
             this.emitError(err.message + ". Retrying " + (max_attempts - attempt) + " more times.");
             return await this.doJoin(max_attempts, attempt);
         }
         
         this.log("info", "Replacing state with cached state.. (%i objects, %i netobjects, %i room components)", this.players_cache.size, this.components_cache.size, this.global_cache.length);
 
-        for (let [ id, object ] of this.players_cache) {
+        for (const [ id, object ] of this.players_cache) {
             object.room = this.client.room;
             this.client.room.objects.set(id, object);
         }
         
-        for (let [ id, component ] of this.components_cache) {
+        for (const  [ id, component ] of this.components_cache) {
             component.room = this.client.room;
             this.client.room.netobjects.set(id, component);
         }
@@ -139,7 +141,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
         return true;
     }
 
-    async handlePayload(payload: PayloadMessage) {
+    async handlePayload(payload: PayloadMessage): Promise<void> {
         switch (payload.tag) {
         case PayloadTag.GameData:
         case PayloadTag.GameDataTo:
@@ -153,7 +155,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
         }
     }
 
-    async handleGameDataMessage(message: GameDataMessage) {
+    async handleGameDataMessage(message: GameDataMessage): Promise<void> {
         switch (message.tag) {
         case MessageTag.Data:
             if (message.netid === this.client.room?.shipstatus?.netid) {
@@ -161,7 +163,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
                     const security = this.client.room?.shipstatus?.systems?.[SystemType.Security] as SecurityCameraSystem;
 
                     if (security) {
-                        for (let [ clientId, player ] of this.client.room.players) {
+                        for (const  [ , player ] of this.client.room.players) {
                             if (player && player.data) {
                                 this.emitPlayerFlags(player.data.name, PlayerFlags.PA, security.players.has(player));
                             }
@@ -183,7 +185,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
         }
     }
 
-    async disconnect() {
+    async disconnect(): Promise<void> {
         this.players_cache = new Map([...this.client.room.objects.entries()].filter(([ objectid ]) => objectid !== this.client.clientid && objectid > 0 /* not global */)) as Map<number, PlayerData>;
         this.components_cache = new Map([...this.client.room.netobjects.entries()].filter(([ , component ]) => component.ownerid !== this.client.clientid));
         this.global_cache = this.client.room.components;
@@ -198,11 +200,11 @@ export default class PublicLobbyBackend extends BackendAdapter {
             this.log("info", "PublicLobbyBackend initialized in region " + ["NA", "EU", "AS"][this.backendModel.region]);
 
             if (this.backendModel.region === PublicLobbyRegion.NorthAmerica) {
-                this.server = MasterServers.NA[1] as [ string, number ];
+                this.server = MasterServers.NA[0] as [ string, number ];
             } else if (this.backendModel.region === PublicLobbyRegion.Europe) {
-                this.server = MasterServers.EU[1] as [ string, number ];
+                this.server = MasterServers.EU[0] as [ string, number ];
             } else if (this.backendModel.region === PublicLobbyRegion.Asia) {
-                this.server = MasterServers.AS[1] as [ string, number ];
+                this.server = MasterServers.AS[0] as [ string, number ];
             }
 
             if (!await this.doJoin())
@@ -336,10 +338,6 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 }
             });
 
-            this.client.on("error", () => {
-                
-            });
-
             this.log("success", "Initialized PublicLobbyBackend!");
         } catch (err) {
             this.log("error", "An error occurred.");
@@ -348,42 +346,44 @@ export default class PublicLobbyBackend extends BackendAdapter {
         }
     }
 
-    awaitSpawns(room: Room) {
-        return new Promise<void>(resolve => {
+    awaitSpawns(): Promise<boolean> {
+        return new Promise<boolean>(resolve => {
+            const playersSpawned = [];
             let gamedataSpawned = false;
-            let playersSpawned = [];
 
+            // eslint-disable-next-line @typescript-eslint/no-this-alias
             const _this = this;
 
-            room.on("spawn", function onSpawn(component) {
+            this.client.on("spawn", function onSpawn(room, component) {
                 if (component.classname === "GameData") {
                     gamedataSpawned = true;
 
                     const gamedata = component as GameData;
 
-                    for (let [ , player ] of gamedata.players) {
-                        if (player.name) _this.emitPlayerColor(player.name, player.color)
+                    for (const [ , player ] of gamedata.players) {
+                        if (player.name) _this.emitPlayerColor(player.name, player.color);
                     }
                 } else if (component.classname === "PlayerControl") {
                     playersSpawned.push(component.ownerid);
                 }
                 
                 if (gamedataSpawned) {
-                    for (let [ clientid, player ] of room.players) {
+                    for (const [ clientid, ] of room.players) {
                         if (!~playersSpawned.indexOf(clientid)) {
                             return;
                         }
                     }
 
-                    room.off("spawn", onSpawn);
-                    resolve();
+                    _this.client.off("spawn", onSpawn);
+                    resolve(true);
                 }
             });
         });
     }
 
-    awaitSettings() {
+    awaitSettings(): Promise<GameOptions> {
         return new Promise<GameOptions>(resolve => {
+            // eslint-disable-next-line @typescript-eslint/no-this-alias
             const _this = this;
             this.client.on("packet", function onPacket(packet) {
                 if (packet.bound === "client" && packet.op === Opcode.Reliable) {
@@ -403,7 +403,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
                         }
                     }
                 }
-            })
+            });
         });
     }
 
@@ -445,14 +445,28 @@ export default class PublicLobbyBackend extends BackendAdapter {
             return false;
         }
         
-        await this.awaitSpawns(room);
+        const spawns = await Promise.race([this.awaitSpawns(), sleep(2000)]);
+
+        if (!spawns) {
+            this.log("fatal", "Could not get players.");
+            this.emitError("Did not recieve players, please restart your Among Us lobby, or wait a few minutes and try again.");
+            await this.destroy();
+            return false;
+        }
         
         if (!this.client) {
             await this.destroy();
             return false;
         }
 
-        const settings = await this.awaitSettings();
+        const settings = await Promise.race([this.awaitSettings(), sleep(2000)]);
+
+        if (!settings) {
+            this.log("fatal", "Could not get settings.");
+            this.emitError("Did not recieve game settings, please restart your Among Us lobby, or wait a few minutes and try again.");
+            await this.destroy();
+            return false;
+        }
         
         this.currentMap = settings.map;
         this.emitMapChange(settings.map);
@@ -465,7 +479,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
 
         this.log("info", "Cleaning up and preparing for re-join..");
 
-        for (const [ clientid, player ] of room.players) {
+        for (const [ , player ] of room.players) {
             if (player && player.data) {
                 this.emitPlayerColor(player.data.name, player.data.color);
             }
@@ -487,4 +501,3 @@ export default class PublicLobbyBackend extends BackendAdapter {
         this.destroyed = true;
     }
 }
-

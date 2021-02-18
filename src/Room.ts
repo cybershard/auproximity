@@ -22,7 +22,6 @@ import Client, { Pose, PlayerModel } from "./Client";
 import { PlayerFlags } from "./types/enums/PlayerFlags";
 
 import { state } from "./main";
-import { CLIENT_RENEG_LIMIT } from "tls";
 
 export default class Room {
     public backendModel: BackendModel;
@@ -206,11 +205,11 @@ export default class Room {
         this.members.push(client);
 
         client.sendOptions(this.options);
-        client.sendSettings(this.settings)
+        client.sendSettings(this.settings);
         client.setHost(this.hostname);
     }
 
-    setOptions(options: HostOptions, host: boolean = false) {
+    setOptions(options: HostOptions, host = false): void {
         this.options = options;
 
         this.members.forEach(c => {

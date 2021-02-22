@@ -39,7 +39,8 @@ export default class Room {
         paSystems: true
     };
     settings: GameSettings = {
-        crewmateVision: 1
+        crewmateVision: 1,
+        map: MapID.TheSkeld
     };
     players = new Map<string, PlayerModel>();
 
@@ -60,14 +61,6 @@ export default class Room {
     }
 
     private initializeBackend() {
-        this.backendAdapter.on(BackendEvent.MapChange, (payload: { map: MapID }) => {
-            this.map = payload.map;
-
-            this.members.forEach(c => {
-                c.setMap(payload.map);
-            });
-        });
-
         this.backendAdapter.on(BackendEvent.PlayerPose, (payload: { name: string; pose: Pose; }) => {
             const client = this.members.find(c => c.name === payload.name);
             if (client) {
@@ -172,10 +165,10 @@ export default class Room {
             }
         });
 
-        this.backendAdapter.on(BackendEvent.Error, async (payload: { err: string }) => {
-            this.members.forEach(c => c.sendError(payload.err));
+        this.backendAdapter.on(BackendEvent.Error, async (payload: { err: string, fatal: boolean }) => {
+            this.members.forEach(c => c.sendError(payload.err, payload.fatal));
 
-            await this.destroy();
+            if (payload.fatal) await this.destroy();
         });
         
         this.backendAdapter.initialize();
@@ -185,7 +178,6 @@ export default class Room {
         if (this.clientRoomGroupMap.has(client.name)) {
             client.setGroupOf(client.uuid, this.clientRoomGroupMap.get(client.name));
         }
-        client.setMap(this.map);
 
         this.members.forEach(c => {
             c.addClient(client.uuid, client.name, client.pose, client.group, client.color);
@@ -231,8 +223,12 @@ export default class Room {
             // do not need to call await this.destroy(); because removeClient() (called by c.leaveRoom()) already calls it.
             return;
         }
-        await this.backendAdapter.destroy();
-
+        
         state.allRooms = state.allRooms.filter(room => room !== this);
+        
+        if (this.backendAdapter.destroyed)
+            return;
+
+        await this.backendAdapter.destroy();
     }
 }

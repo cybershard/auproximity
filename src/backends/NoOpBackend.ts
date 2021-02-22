@@ -1,11 +1,6 @@
-import util from "util";
-import chalk from "chalk";
-
-import logger from "../util/logger";
-
 import { BackendType, BackendModel } from "../types/models/Backends";
 
-import { BackendAdapter, LogMode } from "./Backend";
+import { BackendAdapter} from "./Backend";
 
 export default class NoOpBackend extends BackendAdapter {
     backendModel: BackendModel;

@@ -137,8 +137,8 @@ export default new Vuex.Store({
         }
       })
     },
-    [`socket_${ClientSocketEvents.Error}`] ({ dispatch }) {
-      dispatch('destroyConnection')
+    [`socket_${ClientSocketEvents.Error}`] ({ dispatch }, payload: { fatal: boolean }) {
+      if (payload.fatal) dispatch('destroyConnection')
     },
     [`socket_${ClientSocketEvents.Disconnect}`] ({ dispatch }) {
       dispatch('destroyConnection')

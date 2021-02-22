@@ -7,7 +7,8 @@ import { ImpostorBackendModel } from "../types/models/Backends";
 import { Pose } from "../Client";
 import { IMPOSTOR_BACKEND_PORT } from "../consts";
 
-import { BackendAdapter, LogMode } from "./Backend";
+import { BackendAdapter } from "./Backend";
+import { GameSettings } from "../types/models/ClientOptions";
 
 export default class ImpostorBackend extends BackendAdapter {
     backendModel: ImpostorBackendModel;
@@ -28,11 +29,12 @@ export default class ImpostorBackend extends BackendAdapter {
                 .withUrl(`http://${this.backendModel.ip}:${IMPOSTOR_BACKEND_PORT}/hub`).build();
 
             this.connection.on(ImpostorSocketEvents.HostChange, (name: string) => {
+                this.log("info", "Host changed to " + name + ".");
                 this.emitHostChange(name);
             });
 
-            this.connection.on(ImpostorSocketEvents.MapChange, (id: number) => {
-                this.emitMapChange(id);
+            this.connection.on(ImpostorSocketEvents.SettingsUpdate, (settings: GameSettings) => {
+                this.emitSettingsUpdate(settings);
             });
 
             this.connection.on(ImpostorSocketEvents.GameStarted, () => {
@@ -53,13 +55,16 @@ export default class ImpostorBackend extends BackendAdapter {
 
             this.connection.on(ImpostorSocketEvents.CommsSabotage, (fix: boolean) => {
                 if (fix) {
+                    this.log("info", "Communications was repaired.");
                     this.emitPlayerFromJoinGroup(RoomGroup.Muted, RoomGroup.Main);
                 } else {
+                    this.log("info", "Communications was sabotaged.");
                     this.emitPlayerFromJoinGroup(RoomGroup.Main, RoomGroup.Muted);
                 }
             });
 
             this.connection.on(ImpostorSocketEvents.GameEnd, () => {
+                this.log("info", "Game ended.");
                 this.emitAllPlayerJoinGroups(RoomGroup.Spectator);
             });
 
@@ -81,7 +86,7 @@ export default class ImpostorBackend extends BackendAdapter {
 export enum ImpostorSocketEvents {
     TrackGame = "TrackGame",
     HostChange = "HostChange",
-    MapChange = "MapChange",
+    SettingsUpdate = "SettingsUpdate",
     GameStarted = "GameStarted",
     PlayerMove = "PlayerMove",
     MeetingCalled = "MeetingCalled",

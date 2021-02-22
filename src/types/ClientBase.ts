@@ -4,7 +4,7 @@ import { Pose } from "../Client";
 import Room from "../Room";
 
 import { PlayerFlags } from "./enums/PlayerFlags";
-import { RoomGroup } from "./enums/RoomGroup"
+import { RoomGroup } from "./enums/RoomGroup";
 
 export interface ClientBase {
     uuid: string;

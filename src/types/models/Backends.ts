@@ -1,4 +1,4 @@
-import { PublicLobbyRegion } from "./PublicLobbyRegion"
+import { PublicLobbyRegion } from "./PublicLobbyRegion";
 
 export enum BackendType {
     NoOp,

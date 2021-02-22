@@ -1,6 +1,6 @@
 import { Socket } from "socket.io";
 
-import { ColorID, MapID } from "@skeldjs/constant";
+import { ColorID } from "@skeldjs/constant";
 
 import {
     BackendModel,
@@ -117,8 +117,8 @@ export default class Client implements ClientBase {
         state.allClients = state.allClients.filter(client => client.uuid !== this.uuid);
     }
 
-    sendError(err: string): void {
-        this.socket.emit(ClientSocketEvents.Error, { err });
+    sendError(err: string, fatal: boolean): void {
+        this.socket.emit(ClientSocketEvents.Error, { err, fatal });
     }
 
     setAllClients(array: ClientBase[]): void {
@@ -138,10 +138,6 @@ export default class Client implements ClientBase {
     removeClient(uuid: string): void {
         this.socket.emit(ClientSocketEvents.RemoveClient, uuid);
     }
-    
-    setMap(map: MapID): void {
-        this.socket.emit(ClientSocketEvents.SetMap, { map });
-    }
 
     setPoseOf(uuid: string, pose: Pose): void {
         if (uuid === this.uuid) {
@@ -157,27 +153,27 @@ export default class Client implements ClientBase {
         this.socket.emit(ClientSocketEvents.SetGroup, { uuid, group });
     }
 
-    setColorOf(uuid: string, color: ColorID) {
+    setColorOf(uuid: string, color: ColorID): void {
         this.socket.emit(ClientSocketEvents.SetColorOf, { uuid, color });
     }
 
-    setHost(hostname: string) {
+    setHost(hostname: string): void {
         this.socket.emit(ClientSocketEvents.SetHost, { hostname });
     }
 
-    sendOptions(options: HostOptions) {
+    sendOptions(options: HostOptions): void {
         this.socket.emit(ClientSocketEvents.SetOptions, { options });
     }
 
-    sendSettings(settings: GameSettings) {
+    sendSettings(settings: GameSettings): void {
         this.socket.emit(ClientSocketEvents.SetSettings, { settings });
     }
 
-    setFlagsOf(uuid: string, flags: PlayerFlags) {
+    setFlagsOf(uuid: string, flags: PlayerFlags): void {
         this.socket.emit(ClientSocketEvents.SetFlagsOf, { uuid, flags });
     }
 
-    unsetFlagsOf(uuid: string, flags: PlayerFlags) {
+    unsetFlagsOf(uuid: string, flags: PlayerFlags): void {
         this.socket.emit(ClientSocketEvents.UnsetFlagsOf, { uuid, flags });
     }
 }

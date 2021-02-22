@@ -1,5 +1,4 @@
 export enum BackendEvent {
-    MapChange = "mapchange",
     PlayerPose = "playerpose",
     PlayerColor = "playercolor",
     PlayerJoinGroup = "playerjoingroup",

@@ -25,7 +25,7 @@
     <br>
     <div class="text-center">
       <h2>{{ title }}</h2>
-      <h4 v-if="$store.state.joinedRoom">Current Map: {{ ["The Skeld", "Mira HQ", "Polus", "The Skeld", "Airship"][this.colliderMap] }}</h4>
+      <h4 v-if="$store.state.joinedRoom">Current Map: {{ ["The Skeld", "Mira HQ", "Polus", "The Skeld", "Airship"][this.settings.map] }}</h4>
     </div>
     <v-list v-if="$store.state.joinedRoom">
       <MyClientListItem :client="$store.state.me" :mic="mymic" />
@@ -64,6 +64,7 @@ import { PlayerFlags } from '@/models/PlayerFlags'
 import { getClosestCamera } from '@/lib/CameraPositions'
 
 const AudioContext = window.AudioContext || // Default
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).webkitAudioContext // Safari and old versions of Chrome
 
 @Component({
@@ -83,14 +84,13 @@ export default class ServerDisplayer extends Vue {
   showSnackbar = false;
   snackbarMessage = '';
 
-  colliderMap: MapID = MapID.TheSkeld;
-
   peer?: Peer;
   remotectx?: AudioContext;
   remoteStreams: RemoteStreamModel[] = [];
 
   settings: GameSettings = {
-    crewmateVision: 1
+    crewmateVision: 1,
+    map: MapID.TheSkeld
   };
 
   /**
@@ -257,10 +257,10 @@ export default class ServerDisplayer extends Vue {
   }
 
   @Socket(ClientSocketEvents.Error)
-  onError (payload: { err: string }) {
+  onError (payload: { err: string; fatal: boolean }) {
     this.showSnackbar = true
     this.snackbarMessage = payload.err
-    this.onDisconnect()
+    if (payload.fatal) this.onDisconnect()
   }
 
   @Socket(ClientSocketEvents.SetAllClients)
@@ -289,11 +289,6 @@ export default class ServerDisplayer extends Vue {
       }
       return true
     })
-  }
-
-  @Socket(ClientSocketEvents.SetMap)
-  onSetMap (payload: { map: MapID }) {
-    this.colliderMap = payload.map
   }
 
   @Socket(ClientSocketEvents.SetGroup)
@@ -382,7 +377,7 @@ export default class ServerDisplayer extends Vue {
     } else if (client.group !== RoomGroup.Spectator || this.$store.state.me.group === RoomGroup.Spectator) {
       const p2 = client.pose
       const p1 = (this.$store.state.me.flags & PlayerFlags.PA)
-        ? getClosestCamera(p2, this.colliderMap) || this.$store.state.me.pose
+        ? getClosestCamera(p2, this.settings.map) || this.$store.state.me.pose
         : this.$store.state.me.pose
 
       this.setGainAndPan(client, stream, p1, p2)
@@ -402,7 +397,7 @@ export default class ServerDisplayer extends Vue {
   }
 
   poseCollide (p1: Pose, p2: Pose) {
-    for (const collider of colliderMaps[this.colliderMap]) {
+    for (const collider of colliderMaps[this.settings.map]) {
       const intersections = intersect(collider,
         `M ${p1.x + 40} ${40 - p1.y} L ${p2.x + 40} ${40 - p2.y}`)
       if (intersections.length > 0) return true

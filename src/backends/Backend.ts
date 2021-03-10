@@ -10,7 +10,7 @@ import { Pose } from "../Client";
 import { BackendModel, BackendType } from "../types/models/Backends";
 import { GameSettings } from "../types/models/ClientOptions";
 import { RoomGroup } from "../types/enums/RoomGroup";
-import { BackendEvent } from "../types/enums/BackendEvent";
+import { BackendEvent } from "../types/enums/BackendEvents";
 import { PlayerFlags } from "../types/enums/PlayerFlags";
 
 export type LogMode = "log"|"info"|"success"|"fatal"|"warn"|"error";

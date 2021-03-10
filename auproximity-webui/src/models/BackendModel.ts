@@ -32,9 +32,9 @@ export enum BackendType {
 }
 
 export enum PublicLobbyRegion {
-  NorthAmerica,
-  Europe,
-  Asia
+  NorthAmerica = 'NA',
+  Europe = 'EU',
+  Asia = 'AS'
 }
 
 export enum RoomGroup {

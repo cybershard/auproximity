@@ -55,6 +55,15 @@ export default class Client implements ClientBase {
         this.flags = PlayerFlags.None;
 
         // Initialize socket events
+        this.socket.on(ClientSocketEvents.RemoveClient, async (payload: { uuid: string, ban: boolean }) => {
+            if (this.room && this.room.members && this.name === this.room.hostname) {
+                const client = this.room.members.find(member => member.uuid === payload.uuid);
+                if (client) {
+                    await this.room.removeClient(client, payload.ban);
+                }
+            }
+        });
+
         this.socket.on(ClientSocketEvents.Disconnect, async () => {
             await this.handleDisconnect();
         });
@@ -65,7 +74,7 @@ export default class Client implements ClientBase {
 
         this.socket.on(ClientSocketEvents.SetOptions, async (payload: { options: HostOptions }) => {
             if (this.room && this.name === this.room.hostname) {
-                this.room.setOptions(payload.options);
+                await this.room.setOptions(payload.options);
             }
         });
 
@@ -108,7 +117,7 @@ export default class Client implements ClientBase {
         this.name = "";
         if (!this.room) return;
 
-        await this.room.removeClient(this);
+        await this.room.removeClient(this, false);
         this.room = undefined;
     }
 
@@ -135,8 +144,8 @@ export default class Client implements ClientBase {
         });
     }
 
-    removeClient(uuid: string): void {
-        this.socket.emit(ClientSocketEvents.RemoveClient, uuid);
+    removeClient(uuid: string, ban: boolean): void {
+        this.socket.emit(ClientSocketEvents.RemoveClient, { uuid, ban });
     }
 
     setPoseOf(uuid: string, pose: Pose): void {

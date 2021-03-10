@@ -1,47 +1,28 @@
 import util from "util";
+import dns from "dns";
 import chalk from "chalk";
 
 import { SkeldjsClient } from "@skeldjs/client";
 
 import {
     MapID,
-    Opcode,
-    PayloadTag,
-    MessageTag,
-    RpcTag,
     SystemType,
-    PlayerGameData,
     ColorID
 } from "@skeldjs/constant";
 
 import {
-    GameOptions,
-    PayloadMessage,
-    GameDataMessage,
-    GameDataPayload,
-    SyncSettingsRpc
+    GameOptions
 } from "@skeldjs/protocol";
 
 import {
     Networkable,
-    HqHudSystem,
-    Room,
     PlayerData,
-    CustomNetworkTransform,
-    GameData,
-    SecurityCameraSystem,
-    PlayerControl,
-    MeetingHud,
-    ShipStatus,
-    SystemStatus
-} from "@skeldjs/common";
-
-import { OfficialServers } from "../types/constants/OfficialServers";
+    GameData
+} from "@skeldjs/core";
 
 import logger from "../util/logger";
 
 import { PublicLobbyBackendModel } from "../types/models/Backends";
-import { PublicLobbyRegion } from "../types/models/PublicLobbyRegion";
 
 import { RoomGroup } from "../types/enums/RoomGroup";
 
@@ -53,10 +34,44 @@ import {
 import { PlayerFlags } from "../types/enums/PlayerFlags";
 import { DebugLevel } from "@skeldjs/client/js/lib/interface/ClientConfig";
 import { GameSettings } from "../types/models/ClientOptions";
+import { MatchmakerServers } from "../types/constants/MatchmakerServers";
 
-const GAME_VERSION = "2020.11.17.0";
+const GAME_VERSION = 0x0303095a; // Using integer for now, version parsing isn't working on SkeldJS with 2020.3.5.0 for some reason.
+
+/*
+const colours = {
+    red: chalk.redBright,
+    blue: chalk.blue,
+    green: chalk.green,
+    pink: chalk.magentaBright,
+    orange: chalk.yellow,
+    yellow: chalk.yellowBright,
+    grey: chalk.grey,
+    white: chalk.white,
+    purple: chalk.magenta,
+    brown: chalk.red,
+    cyan: chalk.cyan,
+    lime: chalk.greenBright
+};
+
+
+const fmtName = (player: PlayerData) => {
+    if (!player)
+        return chalk.grey("No Data");
+
+    const has_data = !!player.data;
+    const colour = has_data ? player.data.color : "grey";
+    const name = has_data ? player.data.name || "No Name" : "No Data";
+    const id = player.id || "No ID";
+
+    const consoleClr: chalk.Chalk = colours[colour] || colours.grey;
+
+    return consoleClr(name) + " (" + chalk.grey(player.id) + ")";
+};
+*/
 
 const sleep = ms => new Promise<void>(resolve => setTimeout(resolve, ms));
+const lookupDns = util.promisify(dns.lookup);
 
 export enum ConnectionErrorCode {
     None,
@@ -66,12 +81,16 @@ export enum ConnectionErrorCode {
     FailedToJoin
 }
 
+export type RegionServers = [ string, number ][];
+
 export default class PublicLobbyBackend extends BackendAdapter {
+    static OfficialServers: Record<string, RegionServers> = {};
+
     backendModel: PublicLobbyBackendModel;
 
     client: SkeldjsClient;
 
-    master: [ string, number ][];
+    master: RegionServers;
     server: number;
 
     players_cache: Map<number, PlayerData>;
@@ -123,12 +142,15 @@ export default class PublicLobbyBackend extends BackendAdapter {
                     return false;
                 }
 
+                await this.client.disconnect();
+
                 this.server++;
                 this.server = this.server % this.master.length;
                 attempt++;
 
-                this.log("warn", "Failed to initially spawn, Retrying " + (max_attempts - attempt) + " more times, also trying another server.");
-                this.emitError("Couldn't connect to the server. Retrying " + (max_attempts - attempt) + " more times.", false);
+                const remaining = max_attempts - attempt;
+                this.log("warn", "Failed to initially spawn, Retrying " + remaining + " more time" + (remaining === 1 ? "" : "s") + ", also trying another server.");
+                this.emitError("Couldn't connect to the server. Retrying " + remaining + " more time" + (remaining === 1 ? "" : "s") + ".", false);
                 return this.doJoin(max_attempts, attempt);
             }
         }
@@ -156,7 +178,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
         }
 
         try {
-            await this.client.join(this.backendModel.gameCode, false);
+            await this.client.joinGame(this.backendModel.gameCode, false);
         } catch (e) {
             const err = e as Error;
             attempt++;
@@ -169,138 +191,103 @@ export default class PublicLobbyBackend extends BackendAdapter {
         this.log("info", "Replacing state with cached state.. (%i objects, %i netobjects, %i room components)", this.players_cache.size, this.components_cache.size, this.global_cache.length);
 
         for (const [ id, object ] of this.players_cache) {
-            object.room = this.client.room;
-            this.client.room.objects.set(id, object);
+            object.room = this.client;
+            this.client.objects.set(id, object);
         }
         
         for (const  [ id, component ] of this.components_cache) {
-            component.room = this.client.room;
-            this.client.room.netobjects.set(id, component);
+            component.room = this.client;
+            this.client.netobjects.set(id, component);
         }
 
         for (let i = 0; i < this.global_cache.length; i++) {
             const component = this.global_cache[i];
 
-            component.room = this.client.room;
-            this.client.room.components[i] = component;
+            component.room = this.client;
+            this.client.components[i] = component;
         }
 
         this.log("success", "Joined & successfully replaced state!");
 
-        if (this.client.room.host && this.client.room.host.data) {
-            this.log("success", "Found host: " + this.client.room.host.data.name);
-            this.emitHostChange(this.client.room.host.data.name);
+        if (this.client.host && this.client.host.data) {
+            this.log("success", "Found host: " + this.client.host.data.name);
+            this.emitHostChange(this.client.host.data.name);
         }
         return true;
     }
 
-    async handlePayload(payload: PayloadMessage): Promise<void> {
-        switch (payload.tag) {
-        case PayloadTag.GameData:
-        case PayloadTag.GameDataTo:
-            payload.messages.forEach(message => {
-                this.handleGameDataMessage(message);
-            });
-            break;
-        case PayloadTag.WaitForHost:
-            this.log("info", "Waiting for host to re-connect..");
-            break;
-        }
-    }
-
-    async handleGameDataMessage(message: GameDataMessage): Promise<void> {
-        switch (message.tag) {
-        case MessageTag.Data:
-            if (message.netid === this.client.room?.shipstatus?.netid) {
-                if (this.settings.map === MapID.TheSkeld || this.settings.map === MapID.Polus) {
-                    const security = this.client.room?.shipstatus?.systems?.[SystemType.Security] as SecurityCameraSystem;
-
-                    if (security) {
-                        for (const  [ , player ] of this.client.room.players) {
-                            if (player && player.data) {
-                                this.emitPlayerFlags(player.data.name, PlayerFlags.PA, security.players.has(player));
-                            }
-                        }
-                    }
-                } else if (this.settings.map === MapID.MiraHQ) {
-                    const comms = this.client.room?.shipstatus?.systems?.[SystemType.Communications] as unknown as HqHudSystem;
-                    
-                    if (comms) {
-                        if (comms.completed.length === 0) {
-                            this.emitPlayerFromJoinGroup(RoomGroup.Main, RoomGroup.Muted);
-                        } else if (comms.completed.length === 2 && comms.completed.every(console => console > 0)) {
-                            this.emitPlayerFromJoinGroup(RoomGroup.Muted, RoomGroup.Main);
-                        }
-                    }
-                }
-            }
-            break;
-        }
-    }
-
     async disconnect(): Promise<void> {
-        this.players_cache = new Map([...this.client.room.objects.entries()].filter(([ objectid ]) => objectid !== this.client.clientid && objectid > 0 /* not global */)) as Map<number, PlayerData>;
-        this.components_cache = new Map([...this.client.room.netobjects.entries()].filter(([ , component ]) => component.ownerid !== this.client.clientid));
-        this.global_cache = this.client.room.components;
+        this.players_cache = new Map([...this.client.objects.entries()].filter(([ objectid ]) => objectid !== this.client.clientid && objectid > 0 /* not global */)) as Map<number, PlayerData>;
+        this.components_cache = new Map([...this.client.netobjects.entries()].filter(([ , component ]) => component.ownerid !== this.client.clientid));
+        this.global_cache = this.client.components;
 
         await this.client.disconnect();
         this.didDisconnect = true;
+    }
+
+    async resolveMMDNS(region: string, names: string[]): Promise<RegionServers> {
+        const regions = PublicLobbyBackend.OfficialServers;
+        const servers = [];
+
+        for (let i = 0; i < names.length; i++) {
+            const name = names[i];
+
+            const ips = await lookupDns(name, { all: true, family: 4 });
+            const v4 = ips.filter(ip => ip.family === 4).map(ip => [ ip.address, 22023 ]);
+
+            servers.push(...v4);
+        }
+
+        if (!regions[region]) regions[region] = [];
+        regions[region].push(...servers);
+        return regions[region];
     }
 
     async initialize(): Promise<void> {
         this.destroyed = false;
 
         try {
-            this.log("info", "PublicLobbyBackend initialized in region " + ["NA", "EU", "AS"][this.backendModel.region]);
+            this.log("info", "PublicLobbyBackend initialized in region " + this.backendModel.region);
 
-            
-            switch (this.backendModel.region) {
-                case PublicLobbyRegion.NorthAmerica:
-                    this.master = OfficialServers.NA;
-                    break;
-                case PublicLobbyRegion.Europe:
-                    this.master = OfficialServers.EU;
-                    break;
-                case PublicLobbyRegion.Asia:
-                    this.master = OfficialServers.AS;
-                    break;
-            }
+            const dns = MatchmakerServers[this.backendModel.region];
+            this.master = await this.resolveMMDNS(this.backendModel.region, dns);
+
             this.server = ~~(Math.random() * this.master.length);
 
             if (!await this.doJoin())
                 return;
 
-            this.client.on("disconnect", async (reason, message) => {
+            this.client.on("client.disconnect", async (ev, { reason, message }) => {
                 this.log("info", "Client disconnected: " + (reason === undefined ? "No reason." : (reason + " (" + message + ")")));
             });
-            
-            this.client.on("packet", packet => {
-                if (packet.op === Opcode.Reliable || packet.op === Opcode.Unreliable) {
-                    packet.payloads.forEach(async payload => await this.handlePayload(payload));
+
+            this.client.on("player.move", (ev, { player, position }) => {
+                if (player.data) {
+                    this.emitPlayerPose(player.data.name, position);
                 }
             });
 
-            this.client.on("move", (room: Room, transform: CustomNetworkTransform) => {
-                if (transform.owner && transform.owner.data) {
-                    this.emitPlayerPose(transform.owner.data.name, transform.position);
-                }
-            });
-
-            this.client.on("snapTo", (room: Room, transform: CustomNetworkTransform) => {
-                if (transform.owner && transform.owner.data) {
-                    this.log("log", "Got SnapTo for " + transform.owner.data.name + " (" + transform.owner.id + ") to x: " + transform.position.x + " y: " + transform.position.y);
-                    this.emitPlayerPose(transform.owner.data.name, transform.position);
+            this.client.on("player.snapto", (ev, { player, position }) => {
+                if (player.data) {
+                    this.log("log", "Got SnapTo for " + player.data.name + " (" + player.id + ") to x: " + position.x + " y: " + position.y);
+                    this.emitPlayerPose(player.data.name, position);
                 } else {
                     this.log("warn", "Got snapto, but there was no data.");
                 }
             });
 
-            this.client.on("gameStart", async () => {
-                this.emitAllPlayerJoinGroups(RoomGroup.Main);
-                this.log("info", "Host started the game.");
+            this.client.on("player.setstartcounter", (ev, { counter }) => {
+                if (counter <= 5 && counter > 0) {
+                    this.log("info", "Game is starting in " + counter + " second" + (counter === 1 ? "" : "s"));
+                }
             });
 
-            this.client.on("gameEnd", async () => {
+            this.client.on("game.start", async () => {
+                this.emitAllPlayerJoinGroups(RoomGroup.Main);
+                this.log("info", "Game started.");
+            });
+
+            this.client.on("game.end", async () => {
                 this.emitAllPlayerJoinGroups(RoomGroup.Spectator);
                 this.log("info", "Game ended, re-joining..");
                 
@@ -308,12 +295,12 @@ export default class PublicLobbyBackend extends BackendAdapter {
                     return;
             });
 
-            this.client.on("setHost", async (room: Room, host: PlayerData) => {
+            this.client.on("player.sethost", async (ev, { player: host }) => {
                 if(!host)
                     return;
 
                 if (host.id === this.client.clientid) {
-                    if (this.client.room.players.size === 1) {
+                    if (this.client.players.size === 1) {
                         this.log("warn", "Everyone left, disconnecting to remove the game.");
                         await this.client.disconnect();
                         await this.destroy();
@@ -337,25 +324,29 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 }
             });
 
-            this.client.on("leave", (roow: Room, player: PlayerData) => {
+            this.client.on("player.join", (ev, { player }) => {
+                this.log("info", "Player with ID " + player.id + " joined the game.");
+            });
+
+            this.client.on("player.leave", (ev, { player }) => {
                 this.log("log", "Player with ID " + player.id + " left or was removed.");
             });
 
-            this.client.on("systemSabotage", (room: Room, ship: ShipStatus, system: SystemStatus) => {
+            this.client.on("system.sabotage", (ev, { system }) => {
                 if (system.systemType === SystemType.Communications) {
                     this.emitPlayerFromJoinGroup(RoomGroup.Main, RoomGroup.Muted);
-                    this.log("log", "An impostor sabotaged communications.");
+                    this.log("log", "Someone sabotaged communications.");
                 }
             });
 
-            this.client.on("systemRepair", (room: Room, ship: ShipStatus, system: SystemStatus) => {
+            this.client.on("system.repair", (ev, { system }) => {
                 if (system.systemType === SystemType.Communications) {
                     this.emitPlayerFromJoinGroup(RoomGroup.Muted, RoomGroup.Main);
                     this.log("log", "Someone repaired communications.");
                 }
             });
 
-            this.client.on("syncSettings", (room: Room, control: PlayerControl, settings: GameOptions) => {
+            this.client.on("player.syncsettings", (ev, { settings }) => {
                 if (settings.crewmateVision !== this.settings.crewmateVision) {
                     this.settings.crewmateVision = settings.crewmateVision;
 
@@ -371,31 +362,72 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 this.emitSettingsUpdate(this.settings);
             });
 
-            this.client.on("setColor", (room: Room, control: PlayerControl, color: ColorID) => {
-                if (control && control.owner && control.owner.data) {
-                    this.log("info", control.owner.data.name + " set their colour to " + ColorID[color] + ".");
-                    this.emitPlayerColor(control.owner.data.name, color);
+            this.client.on("player.setname", (ev, { player, name }) => {
+                if (player.data) {
+                    this.log("info", player.id + " set their name to " + name + ".");
                 } else {
-                    this.log("warn", "Color was set, but there was no data.");
+                    if (player) {
+                        this.log("warn", "Name was set for " + player.id + ", but there was no data.");
+                    } else {
+                        this.log("warn", "Name was set for a player, but there was no data.");
+                    }
                 }
             });
 
-            this.client.on("meeting", () => {
-                setTimeout(() => {
-                    this.emitAllPlayerPoses({ x: 0, y: 0 });
-                }, 2500);
-
-                this.log("log", "Someone called a meeting.");
-            });
-
-            this.client.on("completeVoting", (room: Room, meetinghud: MeetingHud, tie: boolean, exiled: PlayerData) => {
-                if (exiled && exiled.data) {
-                    this.emitPlayerJoinGroup(exiled.data.name, RoomGroup.Spectator);
-                    this.log("log", exiled.data.name + " (" + exiled.id + ") was voted off");
+            this.client.on("player.setcolor", (ev, { player, color }) => {
+                if (player?.data) {
+                    this.log("info", player.data.name + " set their colour to " + ColorID[color] + ".");
+                    this.emitPlayerColor(player.data.name, color);
+                } else {
+                    if (player) {
+                        this.log("warn", "Color was set for " + player.id + ", but there was no data.");
+                    } else {
+                        this.log("warn", "Color was set for a player, but there was no data.");
+                    }
                 }
             });
 
-            this.client.on("murder", (room: Room, player: PlayerControl, victim: PlayerData) => {
+            this.client.on("player.meeting", async () => {
+                // eslint-disable-next-line @typescript-eslint/no-this-alias
+                const _this = this;
+                this.client.on("component.spawn", function onComponent(ev, { component }) {
+                    if (component.classname === "MeetingHud") {
+                        setTimeout(() => {
+                            _this.emitAllPlayerPoses({ x: 0, y: 0 });
+                        }, 2500);
+
+                        const all_states = [...component.players.values()];
+                        const state = all_states.find(state => state.reported);
+                        
+                        if (state) {
+                            const player = _this.client.getPlayerByPlayerId(state.playerId);
+                            
+                            if (player) {
+                                if (player.data) {
+                                    _this.log("log", player.data.name + " (" + player.id + ") called a meeting.");
+                                } else {
+                                    _this.log("log", "A player with ID " + player.id + " called a meeting, but there was no data.");
+                                }
+                            } else {
+                                _this.log("log", "Someone called a meeting, but there was no data for the reporter.");
+                            }
+                        } else {
+                            _this.log("log", "Someone called a meeting, but there was no data for the reporter.");
+                        }
+
+                        _this.client.off("component.spawn", onComponent);
+                    }
+                });
+            });
+
+            this.client.on("meetinghud.votingcomplete", (ev, { ejected }) => {
+                if (ejected && ejected.data) {
+                    this.emitPlayerJoinGroup(ejected.data.name, RoomGroup.Spectator);
+                    this.log("log", ejected.data.name + " (" + ejected.id + ") was voted off");
+                }
+            });
+
+            this.client.on("player.murder", (ev, { victim }) => {
                 if (victim && victim.data) {
                     this.log("log", victim.data.name + " (" + victim.id + ") was murdered.");
                     this.emitPlayerJoinGroup(victim.data.name, RoomGroup.Spectator);
@@ -404,12 +436,30 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 }
             });
 
-            this.client.on("removePlayerData", (room: Room, playerData: PlayerGameData) => {
-                const client = room.getPlayerByPlayerId(playerData.playerId);
+            this.client.on("gamedata.removeplayer", (ev, { playerData }) => {
+                const client = this.client.getPlayerByPlayerId(playerData.playerId);
 
                 if (playerData) {
-                    this.log("info", "Removed player " + playerData.name + (client ? " (" + client.id + ")" : ""));
+                    this.log("info", "Removed " + playerData.name + (client ? " (" + client.id + ")" : ""));
                     this.emitPlayerColor(playerData.name, -1);
+                }
+            });
+
+            this.client.on("security.cameras.join", (ev, { player }) => {
+                if (player?.data) {
+                    this.log("info", player.data.name + " (" + player.id + ") went onto cameras.");
+                    this.emitPlayerFlags(player.data.name, PlayerFlags.PA, true);
+                } else {
+                    this.log("warn", "Someone went onto cameras, but there was no data.");
+                }
+            });
+
+            this.client.on("security.cameras.leave", (ev, { player }) => {
+                if (player?.data) {
+                    this.log("info", player.data.name + " (" + player.id + ") went off cameras.");
+                    this.emitPlayerFlags(player.data.name, PlayerFlags.PA, false);
+                } else {
+                    this.log("warn", "Someone went off cameras, but there was no data.");
                 }
             });
 
@@ -430,7 +480,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
             // eslint-disable-next-line @typescript-eslint/no-this-alias
             const _this = this;
 
-            this.client.on("spawn", function onSpawn(room, component) {
+            this.client.on("component.spawn", function onSpawn(ev, { component }) {
                 if (component.classname === "GameData") {
                     gamedataSpawned = true;
 
@@ -444,43 +494,27 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 }
                 
                 if (gamedataSpawned) {
-                    for (const [ clientid, ] of room.players) {
-                        if (!~playersSpawned.indexOf(clientid)) {
+                    for (const [ clientid, ] of _this.client.players) {
+                        if (!playersSpawned.includes(clientid)) {
                             return;
                         }
                     }
 
-                    _this.client.off("spawn", onSpawn);
+                    _this.client.off("component.spawn", onSpawn);
                     resolve(true);
                 }
             });
         });
     }
 
-    awaitSettings(): Promise<GameOptions> {
-        return new Promise<GameOptions>(resolve => {
-            // eslint-disable-next-line @typescript-eslint/no-this-alias
-            const _this = this;
-            this.client.on("packet", function onPacket(packet) {
-                if (packet.bound === "client" && packet.op === Opcode.Reliable) {
-                    const gamedata = packet.payloads.find(
-                        payload => payload.tag === PayloadTag.GameData &&
-                        payload.messages.some(message =>
-                            message.tag === MessageTag.RPC &&
-                            message.rpcid === RpcTag.SyncSettings)) as GameDataPayload;
+    async awaitSettings(): Promise<GameOptions> {
+        if (this.client.settings) {
+            return this.client.settings;
+        }
 
-                    if (gamedata) {
-                        const syncsettings = gamedata.messages.find(message => message.tag === MessageTag.RPC && message.rpcid === RpcTag.SyncSettings) as SyncSettingsRpc;
+        const [ , { settings } ] = await this.client.wait("player.syncsettings");
 
-                        if (syncsettings) {
-                            _this.client.off("packet", onPacket);
-
-                            resolve(syncsettings.settings);
-                        }
-                    }
-                }
-            });
-        });
+        return settings;
     }
 
     async initialSpawn(isFinal = false): Promise<ConnectionErrorCode> {
@@ -492,7 +526,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
             await this.client.connect(ip, port);
             if (!this.client)
                 return ConnectionErrorCode.NoClient;
-            await Promise.race([this.client.identify("auproxy"), sleep(5000)]);
+            await Promise.race([this.client.identify("auproxy"), sleep(2000)]);
             if (!this.client.identified) {
                 if (isFinal) this.emitError("Couldn't connect to the Among Us servers, the servers may be full. Try a different region or try again later.", true);
                 return ConnectionErrorCode.TimedOut;
@@ -510,7 +544,7 @@ export default class PublicLobbyBackend extends BackendAdapter {
         
         this.log("info", "Joining room..");
         try {
-            await this.client.join(this.backendModel.gameCode);
+            await this.client.joinGame(this.backendModel.gameCode);
         } catch (e) {
             this.log("fatal", e.toString());
             if (isFinal) this.emitError("Couldn't join the game, make sure that the game hasn't started and there is a spot for the client.", true);
@@ -519,24 +553,24 @@ export default class PublicLobbyBackend extends BackendAdapter {
 
         this.log("success", "Successfully joined room.");
         this.log("info", "Waiting for spawns and settings..");
-        const room = this.client?.room;
-
-        if (!room) {
+        const code = this.client.code;
+        if (!code) {
             return ConnectionErrorCode.FailedToJoin;
         }
         
-        const spawns = await Promise.race([this.awaitSpawns(), sleep(5000)]);
-        if (!spawns) {
-            this.log("fatal", "I didn't receive spawns from the host.");
-            if (isFinal) this.emitError("Did not recieve players, please restart your Among Us lobby, or wait a few minutes and try again.", true);
+        const result = await Promise.race([Promise.all([this.awaitSpawns(), this.awaitSettings()]), sleep(2000)]);
+        if (!result) {
+            this.log("fatal", "I didn't receive one of spawns or settings from the host.");
+            if (isFinal) this.emitError("Did not recieve players and settings, please restart your Among Us lobby, or wait a few minutes and try again.", true);
             return ConnectionErrorCode.TimedOut;
         }
-        
+
         if (!this.client) {
             return ConnectionErrorCode.NoClient;
         }
 
-        const settings = await Promise.race([this.awaitSettings(), sleep(5000)]);
+        const [ , settings ] = result;
+        
         if (!settings) {
             this.log("fatal", "I didn't receive settings from the host.");
             if (isFinal) this.emitError("Did not recieve game settings, please restart your Among Us lobby, or wait a few minutes and try again.", true);
@@ -550,14 +584,14 @@ export default class PublicLobbyBackend extends BackendAdapter {
             map: settings.map
         });
         
-        if (room.host && room.host.data) {
-            this.emitHostChange(room.host.data.name);
+        if (this.client.host && this.client.host.data) {
+            this.emitHostChange(this.client.host.data.name);
         }
 
         this.log("success", "Got spawns and settings.");
         this.log("info", "Cleaning up and preparing for re-join..");
 
-        for (const [ , player ] of room.players) {
+        for (const [ , player ] of this.client.players) {
             if (player && player.data) {
                 this.emitPlayerColor(player.data.name, player.data.color);
             }

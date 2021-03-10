@@ -84,7 +84,7 @@ export default class ClientOptions extends Vue {
   }
 
   @Socket(ClientSocketEvents.SetOptions)
-  onSetPose (payload: { options: HostOptions }) {
+  onSetOptions (payload: { options: HostOptions }) {
     this.$store.state.options = payload.options
   }
 }

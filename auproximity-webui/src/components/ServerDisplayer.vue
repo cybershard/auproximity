@@ -8,6 +8,7 @@
         dark
         @click="toggleMute()"
         :color="$store.state.muted ? 'red' : 'white'"
+        class='mx-2'
       >
         <v-icon>fa-microphone</v-icon>
       </v-btn>
@@ -18,6 +19,7 @@
         dark
         @click="toggleDeaf()"
         :color="$store.state.deafened ? 'red' : 'white'"
+        class='mx-2'
       >
         <v-icon>fa-headphones</v-icon>
       </v-btn>
@@ -55,7 +57,7 @@ import intersect from 'path-intersection'
 import consts from '@/consts'
 import { ClientSocketEvents } from '@/models/ClientSocketEvents'
 import ClientModel, { Pose, RemoteStreamModel } from '@/models/ClientModel'
-import { RoomGroup } from '@/models/BackendModel'
+import { BackendType, RoomGroup } from '@/models/BackendModel'
 import { colliderMaps } from '@/lib/ColliderMaps'
 import ClientListItem from '@/components/ClientListItem.vue'
 import MyClientListItem from '@/components/MyClientListItem.vue'
@@ -254,6 +256,32 @@ export default class ServerDisplayer extends Vue {
     await this.closeRemoteAudioConnection()
     await this.peer?.destroy()
     this.peer = undefined
+
+    this.$store.state.joinedRoom = false
+    this.$store.state.backendModel.gameCode = ''
+    this.$store.state.backendModel.backendType = BackendType.NoOp
+    this.$store.state.me = {
+      uuid: '',
+      name: '',
+      pose: {
+        x: 0,
+        y: 0
+      },
+      group: RoomGroup.Spectator,
+      color: -1,
+      flags: PlayerFlags.None
+    }
+    this.$store.state.clients = []
+    this.$store.state.options = {
+      falloff: 4.5,
+      falloffVision: false,
+      colliders: true,
+      paSystems: true
+    }
+    this.$store.state.clientOptions = {
+      omniscientGhosts: false
+    }
+    this.$store.state.host = ''
   }
 
   @Socket(ClientSocketEvents.Error)
@@ -278,9 +306,17 @@ export default class ServerDisplayer extends Vue {
   }
 
   @Socket(ClientSocketEvents.RemoveClient)
-  onRemoveClient (uuid: string) {
+  async onRemoveClient (payload: { uuid: string; ban: boolean }) {
+    if (payload.uuid === this.$store.state.me.uuid) {
+      this.showSnackbar = true
+      this.snackbarMessage = payload.ban ? 'You were banned from ' + this.$store.state.backendModel.gameCode : 'You were kicked from ' + this.$store.state.backendModel.gameCode
+      await this.onDisconnect()
+      this.remoteStreams = []
+      return
+    }
+
     this.remoteStreams = this.remoteStreams.filter(remote => {
-      if (remote.uuid === uuid) {
+      if (remote.uuid === payload.uuid) {
         remote.source.disconnect()
         remote.gainNode.disconnect()
         remote.volumeNode.disconnect()
@@ -288,6 +324,9 @@ export default class ServerDisplayer extends Vue {
         return false
       }
       return true
+    })
+    this.$store.state.clients = this.$store.state.clients.filter((client: ClientModel) => {
+      return client.uuid !== payload.uuid
     })
   }
 

@@ -1,6 +1,6 @@
 import { ColorID, MapID } from "@skeldjs/constant";
 
-import { BackendEvent } from "./types/enums/BackendEvent";
+import { BackendEvent } from "./types/enums/BackendEvents";
 import { RoomGroup } from "./types/enums/RoomGroup";
 
 import { GameSettings, HostOptions } from "./types/models/ClientOptions";
@@ -27,6 +27,7 @@ export default class Room {
     public backendModel: BackendModel;
     public backendAdapter: BackendAdapter;
     public members: Client[] = [];
+    public bans: Set<string> = new Set;
 
     public clientRoomGroupMap = new Map<string, RoomGroup>();
 
@@ -175,6 +176,10 @@ export default class Room {
     }
 
     addClient(client: Client): void {
+        if (this.bans.has(client.socket.handshake.address)) {
+            return client.removeClient(client.uuid, true);
+        }
+
         if (this.clientRoomGroupMap.has(client.name)) {
             client.setGroupOf(client.uuid, this.clientRoomGroupMap.get(client.name));
         }
@@ -201,18 +206,21 @@ export default class Room {
         client.setHost(this.hostname);
     }
 
+    async removeClient(client: Client, ban: boolean): Promise<void> {
+        this.members.forEach(c => c.removeClient(client.uuid, ban));
+        this.members = this.members.filter(c => c.uuid !== client.uuid);
+        if (ban) {
+            this.bans.add(client.socket.handshake.address);
+        }
+        if (this.members.length === 0) await this.destroy();
+    }
+
     setOptions(options: HostOptions, host = false): void {
         this.options = options;
 
         this.members.forEach(c => {
             if (c.name !== this.hostname || host) c.sendOptions(options);
         });
-    }
-
-    async removeClient(client: Client): Promise<void> {
-        this.members = this.members.filter(c => c.uuid !== client.uuid);
-        this.members.forEach(c => c.removeClient(client.uuid));
-        if (this.members.length === 0) await this.destroy();
     }
 
     async destroy(): Promise<void> {

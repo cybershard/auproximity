@@ -120,7 +120,13 @@ export default class ServerConnector extends Vue {
   // Public Lobby Backend
   // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
   // @ts-ignore
-  publicLobbyRegion: PublicLobbyRegion = PublicLobbyRegion[this.$route.params.region || 'NorthAmerica'] || PublicLobbyRegion.NorthAmerica;
+  publicLobbyRegion: PublicLobbyRegion = this.$route.params.region || PublicLobbyRegion.NorthAmerica;
+  regionNames = {
+    [PublicLobbyRegion.NorthAmerica]: 'North America',
+    [PublicLobbyRegion.Europe]: 'Europe',
+    [PublicLobbyRegion.Asia]: 'Asia'
+  };
+
   regions = [
     {
       regionName: 'North America',
@@ -143,8 +149,8 @@ export default class ServerConnector extends Vue {
     counter6 (value: string) {
       return value.length === 6 || 'Max 6 characters'
     },
-    publicLobbyRegion (value: string) {
-      return value in PublicLobbyRegion
+    publicLobbyRegion (value: PublicLobbyRegion) {
+      return Object.values(PublicLobbyRegion).includes(value)
     }
   };
 
@@ -179,7 +185,7 @@ export default class ServerConnector extends Vue {
     if (this.backendType === BackendType.Impostor || this.backendType === BackendType.NodePolus) {
       return location.origin + '/' + BackendType[this.backendType] + '/' + this.ip + '/' + this.gameCode.toUpperCase()
     } else if (this.backendType === BackendType.PublicLobby) {
-      return location.origin + '/' + BackendType[this.backendType] + '/' + PublicLobbyRegion[this.publicLobbyRegion] + '/' + this.gameCode.toUpperCase()
+      return location.origin + '/' + BackendType[this.backendType] + '/' + this.publicLobbyRegion + '/' + this.gameCode.toUpperCase()
     }
   }
 }

@@ -76,10 +76,10 @@
   resolved "https://registry.yarnpkg.com/@sindresorhus/is/-/is-0.14.0.tgz#9fb3a3cf3132328151f353de4632e01e52102bea"
   integrity sha512-9NET910DNaIPngYnLLPeg+Ogzqsi9uM4mSboU5y6p8S5DzMTVEsJZrawi+BoDNUVBa2DhJqQYUFvMDfgU062LQ==
 
-"@skeldjs/client@^2.5.7":
-  version "2.5.7"
-  resolved "https://registry.yarnpkg.com/@skeldjs/client/-/client-2.5.7.tgz#e07eada1a295a0c65ccab8012c55800bbd7b7fda"
-  integrity sha512-ghEK4OE/YyXABhn32wS4ay+EaUxZF7l0Fu81H6BERFQl8+b4QA9+Vi8XQvgL3Ntao9WUEYE3TpmFCr+5xFHwiw==
+"@skeldjs/client@^2.5.8":
+  version "2.5.8"
+  resolved "https://registry.yarnpkg.com/@skeldjs/client/-/client-2.5.8.tgz#1cdf8cd98a99baf22f7f608586d09b6df62c39b9"
+  integrity sha512-Bn1rc2lMmCxh164j8kbQY2tkPxtXa4U4Mzd+9R2S8Lor+BRMcQwVmYLm40KPfg0JnIYAlvQBdJ4ZKGMhjBwGwQ==
   dependencies:
     "@skeldjs/constant" "^2.5.2"
     "@skeldjs/core" "^2.5.7"

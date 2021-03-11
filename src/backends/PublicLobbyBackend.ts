@@ -3,6 +3,7 @@ import dns from "dns";
 import chalk from "chalk";
 
 import { SkeldjsClient } from "@skeldjs/client";
+import { tb } from "@skeldjs/text";
 
 import {
     MapID,
@@ -596,6 +597,20 @@ export default class PublicLobbyBackend extends BackendAdapter {
                 this.emitPlayerColor(player.data.name, player.data.color);
             }
         }
+
+        console.log(tb()
+            .bold(tb()
+                .size("200%", tb()
+                    .text("Welcome to AUProximity.")
+                )
+        ).toString());
+
+        await this.client.me.control.chat(tb()
+            .bold(tb()
+                .size("200%", tb()
+                    .text("Welcome to AUProximity.")
+                )
+        ).toString());
         
         await this.disconnect();
         return ConnectionErrorCode.None;

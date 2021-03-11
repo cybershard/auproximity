@@ -17,10 +17,11 @@
   },
   "dependencies": {
     "@microsoft/signalr": "^5.0.0",
-    "@skeldjs/client": "^2.5.8",
-    "@skeldjs/core": "^2.5.7",
+    "@skeldjs/client": "^2.5.10",
+    "@skeldjs/core": "^2.5.10",
     "@skeldjs/constant": "^2.5.2",
     "@skeldjs/protocol": "^2.5.6",
+    "@skeldjs/text": "^2.5.10",
     "chalk": "^4.1.0",
     "cors": "^2.8.5",
     "express": "^4.17.1",

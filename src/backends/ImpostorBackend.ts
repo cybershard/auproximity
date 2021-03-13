@@ -1,14 +1,16 @@
 import { HubConnection, HubConnectionBuilder } from "@microsoft/signalr";
 import _ from "lodash";
 
-import { RoomGroup } from "../types/enums/RoomGroup";
 import { ImpostorBackendModel } from "../types/models/Backends";
 
-import { Pose } from "../Client";
 import { IMPOSTOR_BACKEND_PORT } from "../consts";
 
 import { BackendAdapter } from "./Backend";
 import { GameSettings } from "../types/models/ClientOptions";
+import { GameState } from "../types/enums/GameState";
+import { PlayerFlag } from "../types/enums/PlayerFlags";
+import { GameFlag } from "../types/enums/GameFlags";
+import { Vector2 } from "@skeldjs/util";
 
 export default class ImpostorBackend extends BackendAdapter {
     backendModel: ImpostorBackendModel;
@@ -21,7 +23,7 @@ export default class ImpostorBackend extends BackendAdapter {
         this.gameID = this.backendModel.ip + ":" + IMPOSTOR_BACKEND_PORT;
     }
 
-    throttledEmitPlayerMove = _.throttle(this.emitPlayerPose, 300);
+    throttledEmitPlayerMove = _.throttle(this.emitPlayerPosition, 300);
 
     initialize(): void {
         try {
@@ -38,34 +40,34 @@ export default class ImpostorBackend extends BackendAdapter {
             });
 
             this.connection.on(ImpostorSocketEvents.GameStarted, () => {
-                this.emitAllPlayerJoinGroups(RoomGroup.Main);
+                this.emitGameState(GameState.Game);
             });
 
-            this.connection.on(ImpostorSocketEvents.PlayerMove, (name: string, pose: Pose) => {
+            this.connection.on(ImpostorSocketEvents.PlayerMove, (name: string, pose: Vector2) => {
                 this.throttledEmitPlayerMove(name, pose);
             });
 
             this.connection.on(ImpostorSocketEvents.MeetingCalled, () => {
-                this.emitAllPlayerPoses({ x: 0, y: 0 });
+                this.emitGameState(GameState.Meeting);
             });
 
             this.connection.on(ImpostorSocketEvents.PlayerExiled, (name: string) => {
-                this.emitPlayerJoinGroup(name, RoomGroup.Spectator);
+                this.emitPlayerFlags(name, PlayerFlag.IsDead, true);
             });
 
             this.connection.on(ImpostorSocketEvents.CommsSabotage, (fix: boolean) => {
                 if (fix) {
                     this.log("info", "Communications was repaired.");
-                    this.emitPlayerFromJoinGroup(RoomGroup.Muted, RoomGroup.Main);
+                    this.emitGameFlags(GameFlag.CommsSabotaged, false);
                 } else {
                     this.log("info", "Communications was sabotaged.");
-                    this.emitPlayerFromJoinGroup(RoomGroup.Main, RoomGroup.Muted);
+                    this.emitGameFlags(GameFlag.CommsSabotaged, true);
                 }
             });
 
             this.connection.on(ImpostorSocketEvents.GameEnd, () => {
                 this.log("info", "Game ended.");
-                this.emitAllPlayerJoinGroups(RoomGroup.Spectator);
+                this.emitGameState(GameState.Lobby);
             });
 
             this.log("info", `Impostor Backend initialized at http://${this.backendModel.ip}:${IMPOSTOR_BACKEND_PORT}/hub`);

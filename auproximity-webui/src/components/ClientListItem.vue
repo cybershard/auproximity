@@ -10,7 +10,7 @@
             <i v-if="stream && stream.levels > 10" class="fas fa-volume-up"></i>
             <i v-else class="fas fa-volume-off"></i>
             <span class="pl-3">{{ client.name }}</span>
-            <span v-if="$store.state.host === client.name">
+            <span v-if="$store.state.host === client.uuid">
               (HOST)
             </span>
           </span>
@@ -57,7 +57,7 @@
           {{ ~~(value * 100) }}
         </template>
       </v-slider>
-      <div v-if="$store.state.host === $store.state.me.name">
+      <div v-if="$store.state.host === $store.state.me.uuid">
         <v-btn color="primary" class="mx-1" @click="() => removeClient(false)">Kick</v-btn>
         <v-btn color="error" class="mx-1" @click="() => removeClient(true)">Ban</v-btn>
       </div>
@@ -67,7 +67,7 @@
 
 <script lang="ts">
 import { Component, Vue, Prop } from 'vue-property-decorator'
-import ClientModel, { RemoteStreamModel, ColorID } from '@/models/ClientModel'
+import { ClientModel, RemoteStreamModel, ColorID } from '@/models/ClientModel'
 import { ClientSocketEvents } from '@/models/ClientSocketEvents'
 
 @Component({})

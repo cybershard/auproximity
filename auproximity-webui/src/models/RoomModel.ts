@@ -1,4 +1,4 @@
-import { MapID } from "@skeldjs/constant";
+import { MapID } from '@skeldjs/constant'
 
 export interface HostOptions {
     falloff: number;
@@ -14,4 +14,15 @@ export interface GameSettings {
 
 export interface ClientOptions {
     omniscientGhosts: boolean;
+}
+
+export enum GameState {
+  Lobby,
+  Game,
+  Meeting
+}
+
+export enum GameFlag {
+  None = 0,
+  CommsSabotaged = 1
 }

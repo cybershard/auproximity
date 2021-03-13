@@ -36,9 +36,3 @@ export enum PublicLobbyRegion {
   Europe = 'EU',
   Asia = 'AS'
 }
-
-export enum RoomGroup {
-  Main,
-  Spectator,
-  Muted
-}

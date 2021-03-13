@@ -917,6 +917,11 @@
   resolved "https://registry.yarnpkg.com/@skeldjs/util/-/util-2.2.7.tgz#e9c7e72dee5b7daf23b064534508e70f109f75cf"
   integrity sha512-DzfWZ9v7bOP3q6PU0QHHFep0vKGIowi9ogu0iPt6gpyaGZLgeXqp2mxI4YpqqVFvAJEO5hPAXjtp9J5EKmOt0g==
 
+"@skeldjs/util@^2.5.2":
+  version "2.5.2"
+  resolved "https://registry.yarnpkg.com/@skeldjs/util/-/util-2.5.2.tgz#e746e57579697dd030baf29f3570faf68a45952b"
+  integrity sha512-j1H733gvfRYSq5NHIpInlTV92n5WfvGCoL4JVMe1kL63Vn+GA0hSA9aVjZOtnR1YcHeMpa7sNY5HC+8AncsPQQ==
+
 "@soda/friendly-errors-webpack-plugin@^1.7.1":
   version "1.8.0"
   resolved "https://registry.yarnpkg.com/@soda/friendly-errors-webpack-plugin/-/friendly-errors-webpack-plugin-1.8.0.tgz#84751d82a93019d5c92c0cf0e45ac59087cd2240"

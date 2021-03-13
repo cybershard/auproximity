@@ -1,12 +1,10 @@
 export enum BackendEvent {
-    PlayerPose = "playerpose",
+    PlayerPosition = "playerposition",
     PlayerColor = "playercolor",
-    PlayerJoinGroup = "playerjoingroup",
-    AllPlayerPoses = "allplayerposes",
-    AllPlayerJoinGroups = "allplayerjoingroup",
-    PlayerFromJoinGroup = "playerfromjoingroup",
     HostChange = "hostchange",
+    GameState = "gamestate",
     SettingsUpdate = "settingsupdate",
     PlayerFlags = "playerflags",
+    GameFlags = "gameflags",
     Error = "error"
 }

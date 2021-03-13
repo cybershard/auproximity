@@ -10,7 +10,7 @@
             <i v-if="mic.levels > 10" class="fas fa-volume-up"></i>
             <i v-else class="fas fa-volume-off"></i>
             <span class="pl-3">{{ client.name }}</span>
-            <span v-if="$store.state.host === client.name">
+            <span v-if="$store.state.host === client.uuid">
               (HOST)
             </span>
           </span>
@@ -46,7 +46,7 @@
 
 <script lang="ts">
 import { Component, Vue, Prop } from 'vue-property-decorator'
-import ClientModel, { MyMicModel, ColorID } from '@/models/ClientModel'
+import { ClientModel, MyMicModel, ColorID } from '@/models/ClientModel'
 
 @Component({})
 export default class MyClientListItem extends Vue {

@@ -5,13 +5,13 @@ import chalk from "chalk";
 
 import logger from "../util/logger";
 
-import { Pose } from "../Client";
-
 import { BackendModel, BackendType } from "../types/models/Backends";
 import { GameSettings } from "../types/models/ClientOptions";
-import { RoomGroup } from "../types/enums/RoomGroup";
 import { BackendEvent } from "../types/enums/BackendEvents";
-import { PlayerFlags } from "../types/enums/PlayerFlags";
+import { PlayerFlag } from "../types/enums/PlayerFlags";
+import { GameState } from "../types/enums/GameState";
+import { GameFlag } from "../types/enums/GameFlags";
+import { Vector2 } from "@skeldjs/util";
 
 export type LogMode = "log"|"info"|"success"|"fatal"|"warn"|"error";
 
@@ -34,40 +34,32 @@ export abstract class BackendAdapter extends EventEmitter {
         logger[mode](chalk.grey("[" + BackendType[this.backendModel.backendType] + " " + this.gameID + "]"), formatted);
     }
 
-    emitPlayerPose(name: string, pose: Pose): void {
-        this.emit(BackendEvent.PlayerPose, { name, pose });
+    emitPlayerPosition(name: string, position: Vector2): void {
+        this.emit(BackendEvent.PlayerPosition, { name, position });
     }
 
     emitPlayerColor(name: string, color: ColorID): void {
         this.emit(BackendEvent.PlayerColor, { name, color });
     }
 
-    emitPlayerJoinGroup(name: string, group: RoomGroup): void {
-        this.emit(BackendEvent.PlayerJoinGroup, { name, group });
+    emitHostChange(name: string): void {
+        this.emit(BackendEvent.HostChange, { name });
     }
 
-    emitAllPlayerPoses(pose: Pose): void {
-        this.emit(BackendEvent.AllPlayerPoses, { pose });
-    }
-    
-    emitAllPlayerJoinGroups(group: RoomGroup): void {
-        this.emit(BackendEvent.AllPlayerJoinGroups, { group });
-    }
-
-    emitPlayerFromJoinGroup(from: RoomGroup, to: RoomGroup): void {
-        this.emit(BackendEvent.PlayerFromJoinGroup, { from, to });
-    }
-
-    emitHostChange(hostname: string): void {
-        this.emit(BackendEvent.HostChange, { hostname });
+    emitGameState(state: GameState): void {
+        this.emit(BackendEvent.GameState, { state });
     }
 
     emitSettingsUpdate(settings: GameSettings): void {
         this.emit(BackendEvent.SettingsUpdate, { settings });
     }
 
-    emitPlayerFlags(name: string, flags: PlayerFlags, set: boolean): void {
+    emitPlayerFlags(name: string, flags: PlayerFlag, set: boolean): void {
         this.emit(BackendEvent.PlayerFlags, { name, flags, set });
+    }
+
+    emitGameFlags(flags: GameFlag, set: boolean): void {
+        this.emit(BackendEvent.GameFlags, { flags, set });
     }
 
     emitError(err: string, fatal: boolean): void {

@@ -51,18 +51,18 @@
 import { Component, Vue } from 'vue-property-decorator'
 import { Socket } from 'vue-socket.io-extended'
 import { MapID } from '@skeldjs/constant'
+import { Vector2 } from '@skeldjs/util'
 import Peer from 'peerjs'
 import intersect from 'path-intersection'
 
 import consts from '@/consts'
 import { ClientSocketEvents } from '@/models/ClientSocketEvents'
-import ClientModel, { Pose, RemoteStreamModel } from '@/models/ClientModel'
-import { BackendType, RoomGroup } from '@/models/BackendModel'
+import { ClientModel, RemoteStreamModel, PlayerFlag } from '@/models/ClientModel'
+import { BackendType } from '@/models/BackendModel'
 import { colliderMaps } from '@/lib/ColliderMaps'
 import ClientListItem from '@/components/ClientListItem.vue'
 import MyClientListItem from '@/components/MyClientListItem.vue'
-import { GameSettings } from '@/models/RoomModel'
-import { PlayerFlags } from '@/models/PlayerFlags'
+import { GameFlag, GameState, GameSettings } from '@/models/RoomModel'
 import { getClosestCamera } from '@/lib/CameraPositions'
 
 const AudioContext = window.AudioContext || // Default
@@ -119,7 +119,6 @@ export default class ServerDisplayer extends Vue {
           for (const c of this.$store.state.clients) {
             const call = this.peer.call(c.uuid, this.$store.state.mic.destStream.stream)
             await this.connectCall(call)
-            this.onSetGroup({ uuid: c.uuid, group: c.group })
           }
         }
       }
@@ -263,13 +262,12 @@ export default class ServerDisplayer extends Vue {
     this.$store.state.me = {
       uuid: '',
       name: '',
-      pose: {
+      position: {
         x: 0,
         y: 0
       },
-      group: RoomGroup.Spectator,
       color: -1,
-      flags: PlayerFlags.None
+      flags: PlayerFlag.None
     }
     this.$store.state.clients = []
     this.$store.state.options = {
@@ -291,7 +289,7 @@ export default class ServerDisplayer extends Vue {
     if (payload.fatal) this.onDisconnect()
   }
 
-  @Socket(ClientSocketEvents.SetAllClients)
+  @Socket(ClientSocketEvents.SyncAllClients)
   async onSetAllClients (payload: { uuid: string; name: string }[]) {
     if (typeof this.peer === 'undefined') {
       this.createPeer(this.$store.state.me.uuid)
@@ -330,9 +328,11 @@ export default class ServerDisplayer extends Vue {
     })
   }
 
-  @Socket(ClientSocketEvents.SetGroup)
-  onSetGroup (payload: {uuid: string; group: RoomGroup }) {
-    if (payload.group === RoomGroup.Spectator) {
+  @Socket(ClientSocketEvents.SetFlagsOf)
+  onSetFlagsOf (payload: {uuid: string; flags: number}) {
+    const myFlags = this.$store.state.me.flags
+
+    if (payload.flags & PlayerFlag.IsDead) {
       if (payload.uuid === this.$store.state.me.uuid) {
         this.remoteStreams.forEach(s => {
           if (this.$store.state.clientOptions.omniscientGhosts) {
@@ -340,35 +340,7 @@ export default class ServerDisplayer extends Vue {
             s.pannerNode.setPosition(0, 0, 0)
           }
         })
-      } else if (this.$store.state.me.group === RoomGroup.Main) {
-        const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
-        if (!stream) return
-        stream.gainNode.gain.value = 0
-      } else if (this.$store.state.me.group === RoomGroup.Spectator) {
-        const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
-        if (!stream) return
-        stream.gainNode.gain.value = 1
-        stream.pannerNode.setPosition(0, 0, 0)
-      } else if (this.$store.state.me.group === RoomGroup.Muted) {
-        const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
-        if (!stream) return
-        stream.gainNode.gain.value = 0
-      }
-    } else if (payload.group === RoomGroup.Muted) {
-      if (payload.uuid === this.$store.state.me.uuid) {
-        this.remoteStreams.forEach(s => {
-          s.gainNode.gain.value = 0
-        })
-      } else if (this.$store.state.me.group === RoomGroup.Main) {
-        const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
-        if (!stream) return
-        stream.gainNode.gain.value = 0
-      } else if (this.$store.state.me.group === RoomGroup.Spectator) {
-        const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
-        if (!stream) return
-        stream.gainNode.gain.value = 1
-        stream.pannerNode.setPosition(0, 0, 0)
-      } else if (this.$store.state.me.group === RoomGroup.Muted) {
+      } else if (!(myFlags & PlayerFlag.IsDead)) {
         const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
         if (!stream) return
         stream.gainNode.gain.value = 0
@@ -376,28 +348,45 @@ export default class ServerDisplayer extends Vue {
     }
   }
 
-  @Socket(ClientSocketEvents.SetPose)
-  onSetPose (payload: { uuid: string; pose: Pose }) {
-    if (this.$store.state.me.group === RoomGroup.Main || this.$store.state.me.group === RoomGroup.Spectator) {
-      if (payload.pose.x === 0 && payload.pose.y === 0) {
-        this.remoteStreams.forEach(s => {
-          const client: ClientModel = this.$store.state.clients.find((c: ClientModel) => c.uuid === s.uuid)
-          if (client && client.group === RoomGroup.Main) {
-            s.gainNode.gain.value = 1
+  @Socket(ClientSocketEvents.SetGameFlags)
+  onSetGameFlags (payload: {flags: number}) {
+    const myFlags = this.$store.state.me.flags
+
+    if (this.$store.state.gameState !== GameState.Lobby) {
+      if (payload.flags & GameFlag.CommsSabotaged) {
+        if (!(myFlags & PlayerFlag.IsDead)) {
+          this.remoteStreams.forEach(s => {
+            s.gainNode.gain.value = 0
             s.pannerNode.setPosition(0, 0, 0)
-          }
+          })
+        }
+      }
+    }
+  }
+
+  @Socket(ClientSocketEvents.SetGameState)
+  onSetGameState (payload: {state: GameState}) {
+    switch (payload.state) {
+      case GameState.Meeting:
+        this.remoteStreams.forEach(s => {
+          s.gainNode.gain.value = 1
+          s.pannerNode.setPosition(0, 0, 0)
+        })
+        break
+    }
+  }
+
+  @Socket(ClientSocketEvents.SetPositionOf)
+  onSetPositionOf (payload: { uuid: string; position: Vector2 }) {
+    if (this.$store.state.gameState !== GameState.Meeting) {
+      if (this.$store.state.me.uuid === payload.uuid) {
+        this.remoteStreams.forEach(s => {
+          this.recalcVolumeForRemoteStream(s)
         })
       } else {
-        if (this.$store.state.me.uuid === payload.uuid) {
-          // change volume of everyone relative to our new position
-          this.remoteStreams.forEach(s => {
-            this.recalcVolumeForRemoteStream(s)
-          })
-        } else {
-          const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
-          if (!stream) return
-          this.recalcVolumeForRemoteStream(stream)
-        }
+        const stream = this.remoteStreams.find(s => s.uuid === payload.uuid)
+        if (!stream) return
+        this.recalcVolumeForRemoteStream(stream)
       }
     }
   }
@@ -408,24 +397,43 @@ export default class ServerDisplayer extends Vue {
   }
 
   recalcVolumeForRemoteStream (stream: { uuid: string; gainNode: GainNode; pannerNode: PannerNode }) {
+    const myFlags = this.$store.state.me.flags
+    const gameFlags = this.$store.state.gameFlags
     const client: ClientModel = this.$store.state.clients.find((c: ClientModel) => c.uuid === stream.uuid)
     if (!client) return
-    if (this.$store.state.me.group === RoomGroup.Spectator && this.$store.state.clientOptions.omniscientGhosts) {
+
+    if ((client.flags & PlayerFlag.IsDead) && !(myFlags & PlayerFlag.IsDead)) {
+      stream.gainNode.gain.value = 0
+      stream.pannerNode.setPosition(0, 0, 0)
+      return
+    }
+
+    if (!(myFlags & PlayerFlag.IsDead) && (gameFlags & GameFlag.CommsSabotaged)) {
+      stream.gainNode.gain.value = 0
+      stream.pannerNode.setPosition(0, 0, 0)
+      return
+    }
+
+    if (this.$store.state.gameState === GameState.Meeting) {
       stream.gainNode.gain.value = 1
       stream.pannerNode.setPosition(0, 0, 0)
-    } else if (client.group !== RoomGroup.Spectator || this.$store.state.me.group === RoomGroup.Spectator) {
-      const p2 = client.pose
-      const p1 = (this.$store.state.me.flags & PlayerFlags.PA)
-        ? getClosestCamera(p2, this.settings.map) || this.$store.state.me.pose
-        : this.$store.state.me.pose
-
-      this.setGainAndPan(client, stream, p1, p2)
-    } else {
-      stream.gainNode.gain.value = 0
+      return
     }
+
+    if ((myFlags & PlayerFlag.IsDead) && this.$store.state.clientOptions.omniscientGhosts) {
+      stream.gainNode.gain.value = 1
+      stream.pannerNode.setPosition(0, 0, 0)
+      return
+    }
+    const p2 = client.position
+    const p1 = (this.$store.state.me.flags & PlayerFlag.OnCams)
+      ? getClosestCamera(p2, this.settings.map) || this.$store.state.me.position
+      : this.$store.state.me.position
+
+    this.setGainAndPan(stream, p1, p2)
   }
 
-  setGainAndPan (client: ClientModel, stream: { uuid: string; gainNode: GainNode; pannerNode: PannerNode }, p1: { x: number; y: number }, p2: { x: number; y: number }) {
+  setGainAndPan (stream: { uuid: string; gainNode: GainNode; pannerNode: PannerNode }, p1: Vector2, p2: Vector2) {
     if (this.poseCollide(p1, p2) && this.$store.state.options.colliders) {
       stream.gainNode.gain.value = 0
       stream.pannerNode.setPosition(0, 0, 0)
@@ -435,7 +443,7 @@ export default class ServerDisplayer extends Vue {
     }
   }
 
-  poseCollide (p1: Pose, p2: Pose) {
+  poseCollide (p1: Vector2, p2: Vector2) {
     for (const collider of colliderMaps[this.settings.map]) {
       const intersections = intersect(collider,
         `M ${p1.x + 40} ${40 - p1.y} L ${p2.x + 40} ${40 - p2.y}`)
@@ -444,7 +452,7 @@ export default class ServerDisplayer extends Vue {
     return false
   }
 
-  hypotPose (p1: Pose, p2: Pose) {
+  hypotPose (p1: Vector2, p2: Vector2) {
     return Math.hypot(p1.x - p2.x, p1.y - p2.y)
   }
 

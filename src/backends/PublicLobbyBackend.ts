@@ -130,8 +130,8 @@ export default class PublicLobbyBackend extends BackendAdapter {
                         const reader = new BufferReader(part.data);
                         reader.uint16LE();
                         const pose = {
-                            x: LerpValue(reader.uint16LE() / 65535, -40, 40),
-                            y: LerpValue(reader.uint16LE() / 65535, -40, 40)
+                            x: LerpValue(reader.uint16LE() / 65535, -50, 50),
+                            y: LerpValue(reader.uint16LE() / 65535, -50, 50)
                         };
                         this.emitPlayerPose(player.name, pose);
                     }
@@ -215,8 +215,8 @@ export default class PublicLobbyBackend extends BackendAdapter {
                     const player = this.playerData.find(p => p.transformNetId === rpcPart.handlerid);
                     if (player) {
                         const pose = {
-                            x: LerpValue(rpcPart.x / 65535, -40, 40),
-                            y: LerpValue(rpcPart.y/ 65535, -40, 40)
+                            x: LerpValue(rpcPart.x / 65535, -50, 50),
+                            y: LerpValue(rpcPart.y/ 65535, -50, 50)
                         };
                         this.emitPlayerPose(player.name, pose);
                     }

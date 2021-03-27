@@ -59,7 +59,7 @@ features and bugs being worked on, and PRs should close the issues they target
 for fixes and/or implementations.
 
 ## Credits
-The [skeldjs](https://github.com/edqx/skeldjs/SkeldJS) library by
+The [skeldjs](https://github.com/skeldjs/SkeldJS) library by
 [edqx](https://github.com/edqx), used to interface with public lobbies
 
 ## License

@@ -1,34 +1,51 @@
+import { ColorID, MapID } from "@skeldjs/constant";
+import { Vector2 } from "@skeldjs/util";
+
+import { BackendEvent } from "./types/enums/BackendEvents";
+
+import { GameSettings, HostOptions } from "./types/models/ClientOptions";
+
 import {
-    BackendAdapter, BackendEvent,
-    BackendModel,
     BackendType,
-    GameSettings,
-    HostOptions,
+    BackendModel,
     ImpostorBackendModel,
-    MapIdModel,
-    PublicLobbyBackendModel, RoomGroup
-} from "./types/Backend";
-import Client, {Pose} from "./Client";
+    PublicLobbyBackendModel
+} from "./types/models/Backends";
+
+import { BackendAdapter } from "./backends/Backend";
+
 import ImpostorBackend from "./backends/ImpostorBackend";
-import PublicLobbyBackend from "./backends/PublicLobbyBackend";
 import NoOpBackend from "./backends/NoOpBackend";
-import {state} from "./main";
+import PublicLobbyBackend from "./backends/PublicLobbyBackend";
+
+import Client, { PlayerModel } from "./Client";
+import { PlayerFlag } from "./types/enums/PlayerFlags";
+
+import { state } from "./main";
+import { GameState } from "./types/enums/GameState";
+import { GameFlag } from "./types/enums/GameFlags";
 
 export default class Room {
     public backendModel: BackendModel;
     public backendAdapter: BackendAdapter;
-    public members: Client[] = [];
+    public clients: Client[] = [];
+    public bans: Set<string> = new Set;
 
-    public clientRoomGroupMap = new Map<string, RoomGroup>();
-
-    map: MapIdModel;
+    map: MapID;
     hostname: string;
+    flags = 0;
+    state: GameState = GameState.Lobby;
     options: HostOptions = {
-        falloff: 2.7,
+        falloff: 4.5,
         falloffVision: false,
         colliders: true,
         paSystems: true
     };
+    settings: GameSettings = {
+        crewmateVision: 1,
+        map: MapID.TheSkeld
+    };
+    players = new Map<string, PlayerModel>();
 
     constructor(backendModel: BackendModel) {
         this.backendModel = backendModel;
@@ -36,7 +53,6 @@ export default class Room {
         this.initializeBackend();
     }
 
-    // Factory function
     private static buildBackendAdapter(backendModel: BackendModel): BackendAdapter {
         if (backendModel.backendType === BackendType.PublicLobby) {
             return new PublicLobbyBackend(backendModel as PublicLobbyBackendModel);
@@ -46,121 +62,198 @@ export default class Room {
             return new NoOpBackend();
         }
     }
+
     private initializeBackend() {
-        this.backendAdapter.on(BackendEvent.MapChange, (payload: { map: MapIdModel }) => {
-            this.map = payload.map;
+        this.backendAdapter.on(BackendEvent.PlayerPosition, (payload: { name: string; position: Vector2; }) => {
+            const client = this.getClientByName(payload.name);
 
-            this.members.forEach(c => {
-                c.setMap(payload.map);
-            });
-        });
-        this.backendAdapter.on(BackendEvent.PlayerPose, (payload: { name: string; pose: Pose; }) => {
-            const client = this.members.find(c => c.name === payload.name);
             if (client) {
-                // if the client connection exists, update all clients about the new position
-                this.members.forEach(c => {
-                    c.setPoseOf(client.uuid, payload.pose);
+                console.log(client.uuid, payload.position);
+                this.clients.forEach(c => {
+                    c.setPositionOf(client.uuid, payload.position);
                 });
             }
         });
-        this.backendAdapter.on(BackendEvent.AllPlayerPoses, (payload: { pose: Pose }) => {
-            this.members.forEach(client => {
-                this.members.forEach(c => c.setPoseOf(client.uuid, payload.pose));
-            });
-        });
-        this.backendAdapter.on(BackendEvent.PlayerJoinGroup, (payload: { name: string; group: RoomGroup }) => {
 
-            // store the state of this client <-> roomGroup in the room
-            // this is to restore the room group if the client disconnects and reconnects
-            this.clientRoomGroupMap.set(payload.name, payload.group);
-            const client = this.members.find(c => c.name === payload.name);
+        this.backendAdapter.on(BackendEvent.PlayerColor, (payload: { name: string; color: ColorID }) => {
+            const client = this.getClientByName(payload.name);
+            const player = this.getPlayerByName(payload.name);
+
+            player.color = payload.color;
+
             if (client) {
-                // if the client connection exists, update all clients about the new group
-                this.members.forEach(c => {
-                    c.setGroupOf(client.uuid, payload.group);
+                this.clients.forEach(c => {
+                    c.setColorOf(client.uuid, payload.color);
                 });
             }
         });
-        this.backendAdapter.on(BackendEvent.AllPlayerJoinGroups, (payload: { group: RoomGroup }) => {
-            this.members.forEach(client => {
-                // store the state of this client <-> roomGroup in the room
-                // this is to restore the room group if the client disconnects and reconnects
-                this.clientRoomGroupMap.set(client.name, payload.group);
 
-                this.members.forEach(c => c.setGroupOf(client.uuid, payload.group));
-            });
-        });
-        this.backendAdapter.on(BackendEvent.PlayerFromJoinGroup, (payload: { from: RoomGroup; to: RoomGroup }) => {
-            const fromClients = this.members.filter(c => c.group === payload.from);
-            this.members.forEach(c => {
-                fromClients.forEach(client => {
-                    this.clientRoomGroupMap.set(client.name, payload.to);
-                    c.setGroupOf(client.uuid, payload.to);
+        this.backendAdapter.on(BackendEvent.HostChange, async (payload: { name: string }) => {
+            this.hostname = payload.name;
+
+            const client = this.getClientByName(payload.name);
+
+            if (client) {
+                this.clients.forEach(c => {
+                    c.setHost(client.uuid);
                 });
+            }
+        });
+
+        this.backendAdapter.on(BackendEvent.GameState, async (payload: { state: GameState }) => {
+            if (payload.state === GameState.Lobby) {
+                this.flags = GameFlag.None;
+                for (const [ , player ] of this.players) {
+                    player.flags = PlayerFlag.None;
+                }
+            }
+
+            this.clients.forEach(c => {
+                c.setGameState(payload.state);
+                for (const [ name, player ] of this.players) {
+                    const client = this.getClientByName(name);
+                    if (client) {
+                        c.setFlagsOf(client.uuid, player.flags);
+                    }
+                }
             });
         });
-        this.backendAdapter.on(BackendEvent.Error, async (payload: { err: string }) => {
-            this.members.forEach(c => c.sendError(payload.err));
 
-            await this.destroy();
-        });
-        this.backendAdapter.on(BackendEvent.HostChange, async (payload: { hostname: string }) => {
-            this.hostname = payload.hostname;
-
-            this.members.forEach(c => {
-                c.setHost(c.name === this.hostname);
-            });
-        });
         this.backendAdapter.on(BackendEvent.SettingsUpdate, async (payload: { settings: GameSettings }) => {
-            this.members.forEach(c => {
-                c.sendSettings(payload.settings);
+            this.settings = payload.settings;
+
+            this.clients.forEach(c => {
+                c.setSettings(payload.settings);
             });
         });
+        
+        this.backendAdapter.on(BackendEvent.PlayerFlags, async (payload: { name: string; flags: PlayerFlag; set: boolean}) => {
+            const client = this.getClientByName(payload.name);
+            const player = this.getPlayerByName(payload.name);
+
+            if (payload.set) {
+                player.flags |= payload.flags;
+            } else {
+                player.flags &= ~payload.flags;
+            }
+
+            if (client) {
+                this.clients.forEach(c => {
+                    c.setFlagsOf(client.uuid, player.flags);
+                });
+            }
+        });
+
+        this.backendAdapter.on(BackendEvent.GameFlags, async (payload: { flags: number, set: boolean }) => {
+            if (payload.set) {
+                this.flags |= payload.flags;
+            } else {
+                this.flags &= ~payload.flags;
+            }
+
+            this.clients.forEach(c => {
+                c.setGameFlags(this.flags);
+            });
+        });
+
+        this.backendAdapter.on(BackendEvent.Error, async (payload: { err: string, fatal: boolean }) => {
+            this.clients.forEach(c => {
+                c.sendError(payload.err, payload.fatal);
+            });
+
+            if (payload.fatal) await this.destroy();
+        });
+
         this.backendAdapter.initialize();
     }
 
-    // Public methods
-    addClient(client: Client): void {
-        // restore roomgroup for a client if it exists
-        if (this.clientRoomGroupMap.has(client.name)) {
-            client.setGroupOf(client.uuid, this.clientRoomGroupMap.get(client.name));
+    getPlayerByName(name: string): PlayerModel {
+        const found = this.players.get(name.toLowerCase());
+
+        if (found) {
+            return found;
         }
-        client.setMap(this.map);
 
-        this.members.forEach(c => c.addClient(client.uuid, client.name, client.pose, client.group));
-        client.setAllClients(this.members.map(c => ({
-            uuid: c.uuid,
-            name: c.name,
-            pose: c.pose,
-            group: c.group
-        })));
-        this.members.push(client);
+        const player: PlayerModel = {
+            name,
+            position: { x: 0, y: 0 },
+            color: -1,
+            flags: PlayerFlag.None
+        };
 
-        client.sendOptions(this.options);
-        client.setHost(client.name === this.hostname);
+        this.players.set(name.toLowerCase(), player);
+        return player;
     }
-    setOptions(options: HostOptions, host: boolean = false) {
+
+    getClientByName(name: string): Client|undefined {
+        return this.clients.find(client => client.name.toLowerCase() === name.toLowerCase());
+    }
+
+    addClient(client: Client): void {
+        if (this.bans.has(client.socket.handshake.address)) {
+            return client.removeClient(client.uuid, true);
+        }
+
+        const player = this.getPlayerByName(client.name);
+
+        client.syncAllClients(this.clients.map(c => ({
+            uuid: c.uuid,
+            name: c.name
+        })));
+
+        this.clients.forEach(c => {
+            c.addClient(client.uuid, player.name, player.position, player.color);
+            c.setPositionOf(client.uuid, player.position);
+            c.setColorOf(client.uuid, player.color);
+
+            const p = this.getPlayerByName(c.name);
+            client.setColorOf(c.uuid, p.color);
+            client.setPositionOf(c.uuid, p.position);
+            client.setFlagsOf(c.uuid, p.flags);
+        });
+
+        this.clients.push(client);
+
+        client.setPositionOf(client.uuid, player.position);
+        client.setColorOf(client.uuid, player.color);
+        client.setHost(this.hostname);
+        client.setGameState(this.state);
+        client.setGameFlags(this.flags);
+        client.setSettings(this.settings);
+
+        client.setOptions(this.options);
+    }
+
+    async removeClient(client: Client, ban: boolean): Promise<void> {
+        this.clients.forEach(c => c.removeClient(client.uuid, ban));
+        this.clients = this.clients.filter(c => c.uuid !== client.uuid);
+        if (ban) {
+            this.bans.add(client.socket.handshake.address);
+        }
+        if (this.clients.length === 0) await this.destroy();
+    }
+
+    setOptions(options: HostOptions, host = false): void {
         this.options = options;
 
-        this.members.forEach(c => {
-            if (c.name !== this.hostname || host) c.sendOptions(options);
+        this.clients.forEach(c => {
+            if (c.name !== this.hostname || host) c.setOptions(options);
         });
-    }
-    async removeClient(client: Client): Promise<void> {
-        this.members = this.members.filter(c => c.uuid !== client.uuid);
-        this.members.forEach(c => c.removeClient(client.uuid));
-        if (this.members.length === 0) await this.destroy();
     }
 
     async destroy(): Promise<void> {
-        if (this.members.length > 0) {
-            for (const c of this.members) {
+        if (this.clients.length > 0) {
+            for (const c of this.clients) {
                 await c.leaveRoom();
             }
-            // do not need to call await this.destroy(); because removeClient() (called by c.leaveRoom()) already calls it.
             return;
         }
-        await this.backendAdapter.destroy();
+        
         state.allRooms = state.allRooms.filter(room => room !== this);
+        
+        if (this.backendAdapter.destroyed)
+            return;
+
+        await this.backendAdapter.destroy();
     }
 }

@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.15.1",
+    "@skeldjs/constant": "^2.2.7",
+    "@skeldjs/util": "^2.5.2",
     "core-js": "^3.6.5",
     "lodash": "^4.17.20",
     "path-intersection": "^2.2.0",

@@ -5,7 +5,7 @@
         <ServerConnector @joinroom="joinRoom($event)" />
       </v-col>
       <v-col  cols="12" md="4">
-        <HostOptions />
+        <ClientOptions />
       </v-col>
       <v-col cols="12" md="4">
         <ServerDisplayer />
@@ -28,13 +28,13 @@
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
 import { BackendModel } from '@/models/BackendModel'
-import ClientSocketEvents from '@/models/ClientSocketEvents'
+import { ClientSocketEvents } from '@/models/ClientSocketEvents'
 import ServerConnector from '@/components/ServerConnector.vue'
 import ServerDisplayer from '@/components/ServerDisplayer.vue'
 import Tutorial from '@/components/Tutorial.vue'
 import DiscordServer from '@/components/DiscordServer.vue'
 import GithubStar from '@/components/GithubStar.vue'
-import HostOptions from '@/components/HostOptions.vue'
+import ClientOptions from '@/components/ClientOptions.vue'
 import consts from '@/consts'
 
 @Component({
@@ -44,7 +44,7 @@ import consts from '@/consts'
     Tutorial,
     ServerConnector,
     ServerDisplayer,
-    HostOptions
+    ClientOptions
   }
 })
 export default class Home extends Vue {

@@ -1,5 +1,7 @@
 # AUProximity
 
+# Project moved to (https://github.com/auproximity/auproximity)
+
 [![Heroku](https://img.shields.io/badge/HEROKU-ONLINE-green?style=for-the-badge&logo=heroku)](https://auproxy.herokuapp.com)
 
 AUProximity is an open source proximity voice chat platform, primarily aimed at Among Us.
